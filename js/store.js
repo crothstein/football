@@ -1,118 +1,170 @@
+import { supabase } from './supabase.js';
+
 export class Store {
     constructor() {
-        this.STORAGE_KEY = 'playmaker_playbooks';
-        this.LEGACY_KEY = 'playmaker_plays';
-        this.migrateLegacyPlays();
+        // No local state needed, or maybe minimal caching?
+        // For V1, let's fetch fresh data to ensure consistency.
     }
 
-    migrateLegacyPlays() {
-        const legacyPlaysJson = localStorage.getItem(this.LEGACY_KEY);
-        if (legacyPlaysJson) {
-            const legacyPlays = JSON.parse(legacyPlaysJson);
-            if (legacyPlays.length > 0) {
-                // Check if we already migrated them (to avoid duplicating if key wasn't cleared)
-                // Actually, let's just create a legacy playbook if one doesn't exist
-                const playbooks = this.getPlaybooks();
-                let legacyBook = playbooks.find(pb => pb.name === 'Legacy Plays');
+    // --- Playbooks ---
 
-                if (!legacyBook) {
-                    legacyBook = {
-                        id: 'legacy_book_' + Date.now(),
-                        name: 'Legacy Plays',
-                        teamSize: '5v5', // Default assumption
-                        plays: []
-                    };
-                    playbooks.push(legacyBook);
-                }
+    async getPlaybooks() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
 
-                // Merge plays that don't satisfy strict dup checks if needed, 
-                // but for now simple push is safer to avoid data loss
-                legacyBook.plays = [...legacyBook.plays, ...legacyPlays];
+        const { data, error } = await supabase
+            .from('playbooks')
+            .select('*')
+            .eq('owner_id', user.id)
+            .order('updated_at', { ascending: false });
 
-                this.savePlaybooks(playbooks);
-
-                // Clear legacy key to finish migration
-                localStorage.removeItem(this.LEGACY_KEY);
-                console.log('Migrated legacy plays to Playbook structure.');
-            }
+        if (error) {
+            console.error('Error fetching playbooks:', error);
+            return [];
         }
+        return data.map(record => this._mapPlaybook(record));
     }
 
-    getPlaybooks() {
-        const data = localStorage.getItem(this.STORAGE_KEY);
-        return data ? JSON.parse(data) : [];
-    }
+    async getPlaybook(id) {
+        // We need to fetch plays with it
+        const { data, error } = await supabase
+            .from('playbooks')
+            .select(`
+                *,
+                plays (*)
+            `)
+            .eq('id', id)
+            .single();
 
-    savePlaybooks(playbooks) {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(playbooks));
-    }
-
-    savePlaybook(playbook) {
-        const playbooks = this.getPlaybooks();
-        const index = playbooks.findIndex(pb => pb.id === playbook.id);
-
-        if (!playbook.id) {
-            playbook.id = Date.now().toString();
-            playbook.plays = [];
+        if (error) {
+            console.error('Error fetching playbook:', error);
+            return null;
         }
 
-        if (index >= 0) {
-            playbooks[index] = playbook;
+        const mapped = this._mapPlaybook(data);
+        // Ensure plays is an array (it should be handled by map, but let's be safe if join fails)
+        if (!mapped.plays) mapped.plays = [];
+        return mapped;
+    }
+
+    async savePlaybook(playbook) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const payload = {
+            owner_id: user.id,
+            title: playbook.name, // Mapping 'name' to 'title' as per schema
+            team_size: playbook.teamSize, // Mapping 'teamSize' to 'team_size'
+            updated_at: new Date().toISOString()
+        };
+
+        if (playbook.id) {
+            // Update
+            const { data, error } = await supabase
+                .from('playbooks')
+                .update(payload)
+                .eq('id', playbook.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return this._mapPlaybook(data);
         } else {
-            playbooks.push(playbook);
-        }
+            // Insert
+            const { data, error } = await supabase
+                .from('playbooks')
+                .insert(payload)
+                .select()
+                .single();
 
-        this.savePlaybooks(playbooks);
-        return playbook;
+            if (error) throw error;
+            // The local object expects 'plays' array, but DB doesn't return joined plays on insert usually
+            const mapped = this._mapPlaybook(data);
+            mapped.plays = [];
+            return mapped;
+        }
     }
 
-    getPlaybook(id) {
-        return this.getPlaybooks().find(pb => pb.id === id);
+    async deletePlaybook(id) {
+        const { error } = await supabase
+            .from('playbooks')
+            .delete()
+            .eq('id', id);
+        if (error) console.error('Error deleting playbook:', error);
     }
 
-    deletePlaybook(id) {
-        const playbooks = this.getPlaybooks().filter(pb => pb.id !== id);
-        this.savePlaybooks(playbooks);
-    }
+    // --- Plays ---
 
-    // --- Play Methods ---
+    async savePlay(playbookId, play) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
 
-    savePlay(playbookId, play) {
-        const playbooks = this.getPlaybooks();
-        const bookIndex = playbooks.findIndex(pb => pb.id === playbookId);
+        // Play object has 'formation', 'players', 'routes' inside 'data' JSONB or separate columns?
+        // Schema: name, data (jsonb)
+        // We pack everything else into data
+        const playData = {
+            formation: play.formation,
+            players: play.players,
+            routes: play.routes
+        };
 
-        if (bookIndex === -1) {
-            throw new Error(`Playbook with ID ${playbookId} not found`);
-        }
+        const payload = {
+            playbook_id: playbookId,
+            name: play.name,
+            data: playData,
+            updated_at: new Date().toISOString()
+        };
 
-        const playbook = playbooks[bookIndex];
+        if (play.id && !play.id.startsWith('new_')) { // Check if it's a real UUID or temp
+            // Update
+            const { data, error } = await supabase
+                .from('plays')
+                .update(payload)
+                .eq('id', play.id)
+                .select()
+                .single();
 
-        if (!play.id) {
-            play.id = Date.now().toString();
-        }
-
-        const playIndex = playbook.plays.findIndex(p => p.id === play.id);
-
-        if (playIndex >= 0) {
-            playbook.plays[playIndex] = play;
+            if (error) throw error;
+            return this._mapPlay(data);
         } else {
-            playbook.plays.push(play);
-        }
+            // Insert
+            const { data, error } = await supabase
+                .from('plays')
+                .insert(payload)
+                .select()
+                .single();
 
-        playbooks[bookIndex] = playbook;
-        this.savePlaybooks(playbooks);
-        return play;
+            if (error) throw error;
+            return this._mapPlay(data);
+        }
     }
 
-    deletePlay(playbookId, playId) {
-        const playbooks = this.getPlaybooks();
-        const bookIndex = playbooks.findIndex(pb => pb.id === playbookId);
+    async deletePlay(playId) {
+        const { error } = await supabase
+            .from('plays')
+            .delete()
+            .eq('id', playId);
+        if (error) console.error('Error deleting play:', error);
+    }
 
-        if (bookIndex !== -1) {
-            const playbook = playbooks[bookIndex];
-            playbook.plays = playbook.plays.filter(p => p.id !== playId);
-            playbooks[bookIndex] = playbook;
-            this.savePlaybooks(playbooks);
-        }
+    // Helper to map DB columns back to App Property names
+    _mapPlaybook(dbRecord) {
+        if (!dbRecord) return null;
+        return {
+            id: dbRecord.id,
+            name: dbRecord.title,
+            teamSize: dbRecord.team_size,
+            plays: dbRecord.plays ? dbRecord.plays.map(p => this._mapPlay(p)) : []
+        };
+    }
+
+    _mapPlay(dbRecord) {
+        if (!dbRecord) return null;
+        // dbRecord.data contains players, routes, formation
+        return {
+            id: dbRecord.id,
+            name: dbRecord.name,
+            ...dbRecord.data
+        };
     }
 }

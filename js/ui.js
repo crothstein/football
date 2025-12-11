@@ -43,9 +43,9 @@ export class UI {
         }
     }
 
-    renderCreatePlaybookView() {
+    async renderCreatePlaybookView() {
         // Render existing playbooks list (hidden but preserved or used for "Cancel")
-        const playbooks = this.store.getPlaybooks();
+        const playbooks = await this.store.getPlaybooks();
         this.playbookListEl.innerHTML = '';
 
         if (playbooks.length > 0) {
@@ -76,11 +76,11 @@ export class UI {
         this.renderFormationOptions(size + 'v' + size);
     }
 
-    renderPlaybookDropdownItems() {
+    async renderPlaybookDropdownItems() {
         const listEl = document.getElementById('dropdown-playbook-list');
         if (!listEl) return;
 
-        const playbooks = this.store.getPlaybooks();
+        const playbooks = await this.store.getPlaybooks();
         listEl.innerHTML = '';
 
         const currentId = this.app.currentPlaybook ? this.app.currentPlaybook.id : null;
@@ -158,5 +158,24 @@ export class UI {
     refreshPlayList(playbook) {
         // Re-render only the play list part
         this.renderPlaybookOverview(playbook);
+    }
+
+    renderUserProfile(user) {
+        const avatarEl = document.getElementById('user-avatar');
+        const nameEl = document.getElementById('display-user-name');
+        const emailEl = document.getElementById('display-user-email');
+
+        if (!user) return;
+
+        const email = user.email || 'coach@team.com';
+        // Supabase user metadata might contain full_name if we asked for it, otherwise fallback
+        const name = user.user_metadata?.full_name || 'Coach';
+
+        // Initials
+        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+        if (avatarEl) avatarEl.textContent = initials;
+        if (nameEl) nameEl.textContent = name;
+        if (emailEl) emailEl.textContent = email;
     }
 }

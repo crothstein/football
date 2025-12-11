@@ -1,10 +1,12 @@
-import { Editor } from './editor.js';
-import { Store } from './store.js';
-import { UI } from './ui.js';
-import { getFormations } from './formations.js';
+import { Editor } from './editor.js?v=2';
+import { Store } from './store.js?v=2';
+import { UI } from './ui.js?v=3';
+import { getFormations } from './formations.js?v=2';
+import { AuthManager } from './auth.js?v=2';
 
 class App {
     constructor() {
+        this.auth = new AuthManager();
         this.store = new Store();
         this.editor = new Editor('play-canvas');
         this.ui = new UI(this.store, this.editor, this);
@@ -13,6 +15,7 @@ class App {
         this.currentPlay = null;
 
         this.views = {
+            auth: document.getElementById('view-auth'),
             create: document.getElementById('view-create-playbook'),
             overview: document.getElementById('view-playbook-overview'),
             editor: document.getElementById('view-play-editor')
@@ -21,29 +24,121 @@ class App {
         this.init();
     }
 
-    init() {
+    async init() {
+        try {
+            console.log('App initializing...');
+            // Check Auth
+            const session = await this.auth.getSession();
+            if (!session) {
+                console.log('No session, switching to auth view');
+                this.switchView('auth');
+                this.bindAuthEvents(); // Prepare auth listeners
+
+                // Check specific auth mode from URL (e.g. ?mode=signup)
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('mode') === 'signup') {
+                    this.toggleAuthForms('signup');
+                }
+
+                return;
+            }
+
+            // If authenticated, proceed
+            console.log('Session found, initializing app');
+            this.initializeApp();
+        } catch (err) {
+            console.error('Initialization error:', err);
+            alert('Failed to initialize app: ' + err.message);
+            // Fallback to auth view just in case
+            this.switchView('auth');
+            this.bindAuthEvents();
+        }
+    }
+
+    async initializeApp() {
         this.editor.init();
 
-        // Check for playbooks
-        const playbooks = this.store.getPlaybooks();
+        // Helper to check playbooks and route
+        const playbooks = await this.store.getPlaybooks();
         if (playbooks.length > 0) {
-            // Auto open the most recent one (or just the first one for now)
-            // Or maybe stay on create/select screen? Let's check requirements.
-            // "After you create... redirected... This will be zero...". 
-            // It doesn't strictly say where to land on fresh load, checking requirements again. 
-            // "There is a left side menu... The first option show you which playbook..."
-            // Let's stick to Create/Select screen if no active state, 
-            // but for better UX, if playbooks exist, let's open one? 
-            // Actually, the requirements imply a persistent state or a landing.
-            // Let's start at CREATE screen which lists existing ones.
-            this.switchView('create');
+            this.openPlaybook(playbooks[0].id);
         } else {
             this.switchView('create');
         }
 
-        this.ui.renderCreatePlaybookView();
-
         this.bindEvents();
+    }
+
+    bindAuthEvents() {
+        // Auth Toggles
+        const toSignup = document.getElementById('link-to-signup');
+        const toLogin = document.getElementById('link-to-login');
+
+        if (toSignup) {
+            toSignup.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleAuthForms('signup');
+            });
+        }
+
+        if (toLogin) {
+            toLogin.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleAuthForms('login');
+            });
+        }
+
+        // Login
+        const btnLogin = document.getElementById('btn-login');
+        if (btnLogin) {
+            btnLogin.addEventListener('click', async () => {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                try {
+                    await this.auth.login(email, password);
+                    this.initializeApp();
+                } catch (error) {
+                    alert('Login failed: ' + error.message);
+                }
+            });
+        }
+
+        // Signup
+        const btnSignup = document.getElementById('btn-signup');
+        if (btnSignup) {
+            btnSignup.addEventListener('click', async () => {
+                const name = document.getElementById('signup-name').value;
+                const email = document.getElementById('signup-email').value;
+                const password = document.getElementById('signup-password').value;
+
+                if (!name) {
+                    alert('Please enter your name.');
+                    return;
+                }
+
+                try {
+                    await this.auth.signup(email, password, name);
+                    alert('Signup successful! Check your email for confirmation link.');
+                    this.toggleAuthForms('login'); // Switch back to login
+                } catch (error) {
+                    alert('Signup failed: ' + error.message);
+                }
+            });
+        }
+    }
+
+    // Toggle between Login and Signup forms
+    toggleAuthForms(mode) {
+        const loginForm = document.getElementById('form-login');
+        const signupForm = document.getElementById('form-signup');
+
+        if (mode === 'signup') {
+            loginForm.classList.add('hidden');
+            signupForm.classList.remove('hidden');
+        } else {
+            signupForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        }
     }
 
     bindEvents() {
@@ -58,11 +153,8 @@ class App {
         // Close Modal Button (X)
         const closeBtn = document.getElementById('close-create-modal');
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                // If we have playbooks, go to overview of the first one?
-                // Or just show alert? The mock implies this might cancel creation.
-                // For now, let's try to open the last active playbook, or just alert if none.
-                const playbooks = this.store.getPlaybooks();
+            closeBtn.addEventListener('click', async () => {
+                const playbooks = await this.store.getPlaybooks();
                 if (playbooks.length > 0) {
                     this.openPlaybook(playbooks[0].id);
                 } else {
@@ -104,7 +196,6 @@ class App {
             dropdownCreateBtn.addEventListener('click', () => {
                 if (dropdown) dropdown.classList.add('hidden');
                 this.switchView('create');
-                // We keep the Create View rendering logic as is, or ensure it's reset
                 this.ui.renderCreatePlaybookView();
             });
         }
@@ -161,12 +252,42 @@ class App {
             });
         }
 
-        // Remove old saveBtn listener if it exists generally, but we removed it from HTML
-        // Keeping printBtn
+        // Print Button
         const printBtn = document.getElementById('print-play');
         if (printBtn) {
             printBtn.addEventListener('click', () => {
                 window.print();
+            });
+        }
+
+        // User Profile & Logout
+        const profileBtn = document.getElementById('user-profile-btn');
+        const userMenu = document.getElementById('user-menu');
+        const logoutBtn = document.getElementById('btn-logout');
+
+        if (profileBtn && userMenu) {
+            profileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userMenu.classList.toggle('hidden');
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!profileBtn.contains(e.target) && !userMenu.contains(e.target)) {
+                    userMenu.classList.add('hidden');
+                }
+            });
+        }
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await this.auth.logout();
+                    alert('Logged out successfully.');
+                    window.location.reload(); // Reload to clear state and show Auth view
+                } catch (err) {
+                    alert('Error logging out: ' + err.message);
+                }
             });
         }
     }
@@ -178,7 +299,7 @@ class App {
         if (this.views[viewName]) this.views[viewName].classList.remove('hidden');
     }
 
-    handleCreatePlaybook() {
+    async handleCreatePlaybook() {
         const nameInput = document.getElementById('new-playbook-name');
         const name = nameInput.value.trim();
         if (!name) {
@@ -198,22 +319,25 @@ class App {
         const formattedSize = size.includes('v') ? size : `${size}v${size}`;
 
         const newPlaybook = {
-            id: Date.now().toString(),
+            // id: Date.now().toString(), // DB handles ID now
             name: name,
             teamSize: formattedSize,
             defaultFormationIndex: formationIdx,
             plays: []
         };
 
-        this.store.savePlaybook(newPlaybook);
-        this.openPlaybook(newPlaybook.id);
-
-        // Reset form
-        nameInput.value = '';
+        try {
+            const savedBook = await this.store.savePlaybook(newPlaybook);
+            this.openPlaybook(savedBook.id);
+            // Reset form
+            nameInput.value = '';
+        } catch (err) {
+            alert('Error creating playbook: ' + err.message);
+        }
     }
 
-    openPlaybook(playbookId) {
-        this.currentPlaybook = this.store.getPlaybook(playbookId);
+    async openPlaybook(playbookId) {
+        this.currentPlaybook = await this.store.getPlaybook(playbookId);
         if (this.currentPlaybook) {
             this.switchView('overview');
             this.ui.renderPlaybookOverview(this.currentPlaybook);
@@ -274,7 +398,7 @@ class App {
         console.log('Default formation saved');
     }
 
-    handleNewPlay() {
+    async handleNewPlay() {
         console.log('handleNewPlay called');
         if (!this.currentPlaybook) {
             console.error('No current playbook!');
@@ -300,7 +424,7 @@ class App {
 
         // Create new play object
         const newPlay = {
-            id: Date.now().toString(),
+            // id: Date.now().toString(), // Let DB or save handle ID
             name: 'New Play',
             formation: 'Custom',
             players: startingPlayers,
@@ -308,14 +432,18 @@ class App {
         };
 
         // Save it immediately so it has an ID and exists
-        this.store.savePlay(this.currentPlaybook.id, newPlay);
-        console.log('Created new play:', newPlay.id);
+        try {
+            const savedPlay = await this.store.savePlay(this.currentPlaybook.id, newPlay);
+            console.log('Created new play:', savedPlay.id);
 
-        // REFRESH STATE: Update local playbook reference from store
-        this.currentPlaybook = this.store.getPlaybook(this.currentPlaybook.id);
+            // REFRESH STATE: Update local playbook reference from store
+            this.currentPlaybook = await this.store.getPlaybook(this.currentPlaybook.id);
 
-        // Open it
-        this.openPlay(newPlay.id);
+            // Open it
+            this.openPlay(savedPlay.id);
+        } catch (err) {
+            alert('Error creating play: ' + err.message);
+        }
     }
 
     openPlay(playId) {
@@ -364,7 +492,7 @@ class App {
         this.editor.setLocked(true); // Start locked
     }
 
-    saveCurrentPlay() {
+    async saveCurrentPlay() {
         if (!this.currentPlay || !this.currentPlaybook) return;
 
         const data = this.editor.getData();
@@ -373,12 +501,15 @@ class App {
         // Name is already updated via input listener, but let's ensure
         this.currentPlay.name = document.getElementById('play-name').value;
 
-        this.store.savePlay(this.currentPlaybook.id, this.currentPlay);
+        try {
+            await this.store.savePlay(this.currentPlaybook.id, this.currentPlay);
 
-        // REFRESH STATE: Update local playbook reference so UI/Logic stays in sync
-        this.currentPlaybook = this.store.getPlaybook(this.currentPlaybook.id);
-
-        console.log('Play saved', this.currentPlay);
+            // REFRESH STATE: Update local playbook reference so UI/Logic stays in sync
+            this.currentPlaybook = await this.store.getPlaybook(this.currentPlaybook.id);
+            console.log('Play saved', this.currentPlay);
+        } catch (err) {
+            console.error('Error saving play:', err);
+        }
     }
 }
 
