@@ -305,8 +305,7 @@ body {
 }
 
 .player-circle {
-    fill: white;
-    stroke: var(--primary);
+    /* fill and stroke controlled by JS */
     stroke-width: 3;
 }
 
@@ -431,4 +430,597 @@ body {
     .canvas-wrapper {
         box-shadow: none;
     }
+}
+
+/* Playbook Views */
+.view-section {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.view-section.hidden {
+    display: none !important;
+}
+
+/* Dark Overlay for Create View */
+.dark-overlay {
+    background-color: #1f2937;
+    /* Dark slate */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 50;
+}
+
+.modal-container {
+    width: 600px;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    color: white;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header h2 {
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+}
+
+.btn-icon-light {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-icon-light:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: white;
+}
+
+/** Success Checkmark Button **/
+.btn-icon-success {
+    background: transparent;
+    border: 2px solid var(--success);
+    color: var(--success);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-icon-success:hover {
+    background: var(--success);
+    color: white;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.modal-field {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.modal-field label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: white;
+    text-transform: uppercase;
+}
+
+.dark-input {
+    background: #334155;
+    border: 1px solid #475569;
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    width: 100%;
+    max-width: 400px;
+    text-align: left;
+    outline: none;
+    font-size: 1rem;
+}
+
+.dark-input:focus {
+    border-color: var(--primary);
+    background: #1e293b;
+}
+
+/* Team Size Selector (Buttons) */
+.team-size-selector {
+    display: flex;
+    background: #334155;
+    border-radius: 4px;
+    /* Slight rounded or sharp as per mock */
+    padding: 0;
+    overflow: hidden;
+}
+
+.size-btn {
+    border: none;
+    background: transparent;
+    color: white;
+    padding: 0.75rem 1.25rem;
+    cursor: pointer;
+    font-weight: 600;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background 0.2s;
+}
+
+.size-btn:last-child {
+    border-right: none;
+}
+
+.size-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.size-btn.active {
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.field-preview-box {
+    width: 100%;
+    max-width: 400px;
+    height: 180px;
+    background: #334155;
+    border-radius: 6px;
+    border: 1px solid #475569;
+}
+
+/* Sidebar Styles (Modern) */
+.modern-sidebar {
+    background: white;
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    padding: 1.5rem;
+    gap: 2rem;
+}
+
+.app-brand-area {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.app-icon {
+    width: 36px;
+    height: 36px;
+    background: black;
+    color: white;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.app-name {
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.app-name .subtitle {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.playbook-dropdown-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: #f1f5f9;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-main);
+    transition: background 0.2s;
+    font-size: 0.9rem;
+}
+
+.playbook-dropdown-btn:hover {
+    background: #e2e8f0;
+}
+
+.dot-indicator {
+    color: var(--primary);
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+}
+
+.current-playbook-selector {
+    position: relative;
+    width: 100%;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    z-index: 50;
+    animation: slideDown 0.1s ease-out;
+}
+
+.dropdown-menu.hidden {
+    display: none;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background: #f1f5f9;
+}
+
+.dropdown-item.active {
+    background: #e0e7ff;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0.5rem 0;
+}
+
+.dropdown-item.create-new {
+    color: var(--text-muted);
+}
+
+.dropdown-item.create-new:hover {
+    color: var(--primary);
+}
+
+.menu-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.sidebar-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.menu-item {
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 0.6rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-main);
+    border-radius: 6px;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.menu-item:hover:not(.disabled) {
+    background: #f8fafc;
+    color: var(--primary);
+}
+
+.menu-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Main Content Area */
+.light-bg {
+    background-color: white;
+    /* As per mock likely white or very light grey */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.header-title-area h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.header-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.btn-dark {
+    background: #0f172a;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-dark:hover {
+    background: #1e293b;
+}
+
+.filter-bar {
+    padding: 0 2rem 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+}
+
+.search-wrapper {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 400px;
+}
+
+.search-wrapper input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.pill-select {
+    padding: 0.5rem 1rem;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Playbook Overview View */
+#view-playbook-overview {
+    flex-direction: row;
+}
+
+/* Sidebar Extensions */
+.sidebar-left .btn-text {
+    background: transparent;
+    border: none;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-main);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sidebar-nav {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nav-item {
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.nav-item:hover {
+    background: #f1f5f9;
+    color: var(--text-main);
+}
+
+.nav-item.active {
+    background: #e0e7ff;
+    color: var(--primary);
+}
+
+.main-content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-app);
+    overflow: hidden;
+}
+
+.overview-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-bar input {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    width: 250px;
+    outline: none;
+}
+
+.plays-grid {
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+    overflow-y: auto;
+}
+
+.play-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.play-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
+}
+
+.play-card-preview {
+    height: 140px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.play-card-icon {
+    font-size: 3rem;
+    opacity: 0.5;
+}
+
+.play-card-info {
+    padding: 1rem;
+}
+
+.play-name {
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 0.25rem;
+}
+
+.play-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #e2e8f0;
+    color: var(--text-muted);
+    margin-left: 1rem;
+}
+
+.badge-warning {
+    background: #fef9c3;
+    color: #a16207;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+/* Fix Top Bar for Editor View */
+#view-play-editor .top-bar {
+    /* reuse existing top-bar styles but ensure context */
+}
+
+.btn-small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.action-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
 }

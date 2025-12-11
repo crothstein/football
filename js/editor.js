@@ -1,478 +1,468 @@
 export class Editor {
-    constructor(svgId) {
-        this.svg = document.getElementById(svgId);
+    constructor(canvasId) {
+        this.svg = document.getElementById(canvasId);
         this.playersLayer = document.getElementById('players-layer');
         this.routesLayer = document.getElementById('routes-layer');
-        this.fieldLayer = document.getElementById('field-layer');
 
-        if (!this.playersLayer || !this.routesLayer || !this.fieldLayer) {
-            console.error('CRITICAL ERROR: SVG Layers not found!', {
-                players: this.playersLayer,
-                routes: this.routesLayer,
-                field: this.fieldLayer
-            });
-        }
-
-        this.selectedElement = null;
+        this.isLocked = true;
+        this.selectedPlayer = null;
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
 
-        this.isDrawing = false;
-        this.currentRoute = null;
-        this.activePlayerId = null; // The player we are drawing for
+        // UI References
+        this.propertiesPanel = document.getElementById('properties-panel');
+        this.lockIndicator = document.getElementById('lock-indicator');
+        this.toggleLockBtn = document.getElementById('toggle-lock-btn');
+        this.editorTools = document.getElementById('editor-tools'); // The bottom toolbar
+        this.saveBtn = document.getElementById('save-play');
 
-        this.init();
+        // Bind methods
+        this.handleMouseDown = this.handleMouseDown.bind(this);
+        this.handleMouseMove = this.handleMouseMove.bind(this);
+        this.handleMouseUp = this.handleMouseUp.bind(this);
+        this.handleCanvasClick = this.handleCanvasClick.bind(this);
+
+        this.mode = 'play'; // 'play' | 'formation'
+    }
+
+    setMode(mode) {
+        this.mode = mode;
+        // If switching to formation mode, maybe clear routes? 
+        // For now, we just stop new ones.
+        if (mode === 'formation') {
+            // Optional: visual cue?
+        }
     }
 
     init() {
-        console.log('Editor.init() called');
-        this.drawField();
-        this.setupEventListeners();
+        this.svg.addEventListener('mousedown', this.handleMouseDown);
+        window.addEventListener('mousemove', this.handleMouseMove);
+        window.addEventListener('mouseup', this.handleMouseUp);
+        this.svg.addEventListener('click', this.handleCanvasClick);
 
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            this.updateCanvasSize();
+        this.bindPanelEvents();
+        // this.bindLockEvent(); // Handled by App
+    }
+
+    bindLockEvent() {
+        if (this.toggleLockBtn) {
+            this.toggleLockBtn.addEventListener('click', () => {
+                this.setLocked(!this.isLocked);
+            });
+        }
+    }
+
+    bindPanelEvents() {
+        document.getElementById('finish-edit-player').addEventListener('click', () => {
+            this.deselectPlayer();
         });
-    }
 
-    drawField() {
-        console.log('Drawing field...');
-        // Clear existing field
-        this.fieldLayer.innerHTML = '';
-
-        // Draw Grass
-        const fieldRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        fieldRect.setAttribute('width', '100%');
-        fieldRect.setAttribute('height', '100%');
-        fieldRect.setAttribute('fill', '#4ade80');
-        this.fieldLayer.appendChild(fieldRect);
-        console.log('Field rect appended');
-
-        // Draw Yard Lines (Horizontal version)
-        for (let i = 1; i < 10; i++) {
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', '0');
-            line.setAttribute('y1', `${i * 10}%`);
-            line.setAttribute('x2', '100%');
-            line.setAttribute('y2', `${i * 10}%`);
-            line.setAttribute('stroke', 'white');
-            line.setAttribute('stroke-opacity', '0.5');
-            line.setAttribute('stroke-width', '2');
-            this.fieldLayer.appendChild(line);
-        }
-    }
-
-    setupEventListeners() {
-        // Dragging Logic
-        this.svg.addEventListener('mousedown', (e) => this.onMouseDown(e));
-        this.svg.addEventListener('mousemove', (e) => this.onMouseMove(e));
-        this.svg.addEventListener('mouseup', (e) => this.onMouseUp(e));
-        this.svg.addEventListener('mouseleave', (e) => this.onMouseUp(e));
-
-        // Route Drawing Logic (Click based)
-        this.svg.addEventListener('click', (e) => this.onCanvasClick(e));
-    }
-
-    getMousePos(evt) {
-        const CTM = this.svg.getScreenCTM();
-        return {
-            x: (evt.clientX - CTM.e) / CTM.a,
-            y: (evt.clientY - CTM.f) / CTM.d
-        };
-    }
-
-    addPlayer(type) {
-        console.log('Adding player:', type); // Debug log
-        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        group.setAttribute('class', 'draggable');
-        group.setAttribute('transform', 'translate(400, 300)');
-        group.dataset.type = type;
-        // Add unique ID
-        group.id = 'p_' + Date.now();
-
-        if (type === 'offense') {
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('cx', '0');
-            circle.setAttribute('cy', '0');
-            circle.setAttribute('r', '20');
-            // Explicitly set styles to ensure visibility
-            circle.setAttribute('fill', 'white');
-            circle.setAttribute('stroke', '#6366f1');
-            circle.setAttribute('stroke-width', '4');
-            circle.setAttribute('class', 'player-circle'); // Keep class for selection logic
-            group.appendChild(circle);
-            group.dataset.color = '#6366f1'; // Set default color
-        } else if (type === 'defense') {
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', 'M-15,-15 L15,15 M15,-15 L-15,15');
-            path.setAttribute('stroke', '#ef4444');
-            path.setAttribute('stroke-width', '4');
-            path.setAttribute('class', 'player-cross');
-            group.appendChild(path);
-        } else if (type === 'ball') {
-            const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-            ellipse.setAttribute('rx', 8);
-            ellipse.setAttribute('ry', 12);
-            ellipse.setAttribute('class', 'ball');
-            group.appendChild(ellipse);
-        }
-
-        // Re-query to be absolutely safe
-        const layer = document.getElementById('players-layer');
-        if (layer) {
-            layer.appendChild(group);
-        } else {
-            console.error('Failed to find players-layer during append');
-        }
-
-        return group;
-    }
-
-    onMouseDown(e) {
-        // Don't deselect if we are in drawing mode
-        if (this.isDrawing) return;
-
-        // Clear previous selection if clicking background
-        if (e.target.id === 'play-canvas' || e.target.id === 'field-layer' || e.target.tagName === 'rect') {
-            this.deselectAll();
-        }
-
-        const draggableGroup = e.target.closest('.draggable');
-        if (draggableGroup) {
-            this.selectElement(draggableGroup);
-            this.isDragging = true;
-
-            // Dragging logic setup...
-            const coord = this.getMousePos(e);
-            const transform = this.selectedElement.getAttribute('transform');
-            let currentX = 0, currentY = 0;
-            const match = /translate\s*\(\s*([-\d.]+)(?:[,\s]+([-\d.]+))?\s*\)/.exec(transform);
-            if (match) {
-                currentX = parseFloat(match[1]);
-                currentY = match[2] ? parseFloat(match[2]) : 0;
+        document.getElementById('undo-change').addEventListener('click', () => {
+            if (this.selectedPlayer) {
+                this.undoLastRoutePoint(this.selectedPlayer);
             }
-            this.prevPlayerPos = { x: currentX, y: currentY };
-            this.dragOffset.x = coord.x - currentX;
-            this.dragOffset.y = coord.y - currentY;
-            e.stopPropagation();
-        } else if (e.target.classList.contains('route-path')) {
-            // Handle Route Click -> Select Player
-            const playerId = e.target.dataset.playerId;
-            if (playerId) {
-                const player = document.getElementById(playerId);
-                if (player) {
-                    this.selectElement(player);
-                    e.stopPropagation();
+        });
+
+        document.getElementById('delete-element').addEventListener('click', () => {
+            if (this.selectedPlayer && confirm('Delete this player?')) {
+                this.deletePlayer(this.selectedPlayer.id);
+                this.deselectPlayer();
+            }
+        });
+
+        document.getElementById('delete-element').addEventListener('click', () => {
+            if (this.selectedPlayer && confirm('Delete this player?')) {
+                this.deletePlayer(this.selectedPlayer.id);
+                this.deselectPlayer();
+            }
+        });
+
+        const clearBtn = document.querySelector('#clear-play');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (confirm('Clear entire play?')) {
+                    this.clear();
                 }
-            }
-        }
-    }
-
-    selectElement(el) {
-        this.selectedElement = el;
-        this.highlightElement(el);
-        if (this.onSelectionChange) {
-            this.onSelectionChange(el);
-        }
-    }
-
-    startRouteFromPlayer(player) {
-        // Get player position
-        const transform = player.getAttribute('transform');
-        const parts = /translate\(\s*([^\s,)]+)[ ,]([^\s,)]+)/.exec(transform);
-        let x = 400, y = 300; // Defaults
-        if (parts) {
-            x = parseFloat(parts[1]);
-            y = parseFloat(parts[2]);
-        }
-
-        this.activePlayerId = player.id;
-
-        // Create new path element
-        this.currentRoute = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        this.currentRoute.setAttribute('class', 'route-path');
-        this.currentRoute.setAttribute('d', `M${x},${y}`);
-        this.currentRoute.dataset.playerId = this.activePlayerId;
-
-        // Match player color if possible
-        const color = player.dataset.color || '#6366f1';
-        this.currentRoute.style.stroke = color;
-        this.currentRoute.dataset.color = color;
-
-        // Create arrow polygon for this route
-        const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        arrow.setAttribute('points', '0,0 10,5 0,10');
-        arrow.setAttribute('fill', color);
-        arrow.setAttribute('class', 'route-arrow');
-        arrow.dataset.routeId = this.currentRoute.dataset.playerId + '_' + Date.now();
-        this.currentRoute.dataset.arrowId = arrow.dataset.routeId;
-
-        this.routesLayer.appendChild(this.currentRoute);
-        this.routesLayer.appendChild(arrow);
-        this.updateRouteArrow(this.currentRoute, arrow);
-    }
-
-    highlightElement(el) {
-        // Remove highlight from others
-        this.playersLayer.childNodes.forEach(node => {
-            if (node.nodeType === 1) node.style.opacity = '0.6';
-        });
-        el.style.opacity = '1.0';
-    }
-
-    deselectAll() {
-        this.selectedElement = null;
-        this.playersLayer.childNodes.forEach(node => {
-            if (node.nodeType === 1) node.style.opacity = '1.0';
-        });
-        if (this.onSelectionChange) this.onSelectionChange(null);
-    }
-
-    updateElementColor(color) {
-        if (!this.selectedElement) return;
-
-        const type = this.selectedElement.dataset.type;
-        const shape = this.selectedElement.querySelector('circle, path, ellipse');
-
-        if (shape) {
-            if (type === 'offense') {
-                shape.style.stroke = color;
-            } else if (type === 'defense') {
-                shape.style.stroke = color;
-            }
-            // Store color in dataset for persistence
-            this.selectedElement.dataset.color = color;
-        }
-
-        // Also update any routes connected to this player
-        const playerId = this.selectedElement.id;
-        if (playerId) {
-            const routes = this.routesLayer.querySelectorAll(`path[data-player-id="${playerId}"]`);
-            routes.forEach(route => {
-                route.style.stroke = color;
-                const colorId = color.substring(1);
-                route.setAttribute('marker-end', `url(#arrowhead-${colorId})`);
             });
         }
-    }
-
-    deleteSelected() {
-        if (this.selectedElement) {
-            // Remove connected routes first
-            const playerId = this.selectedElement.id;
-            if (playerId) {
-                const routes = this.routesLayer.querySelectorAll(`path[data-player-id="${playerId}"]`);
-                routes.forEach(route => route.remove());
-            }
-            this.selectedElement.remove();
-            this.deselectAll();
-        }
-    }
-
-    onMouseMove(e) {
-        if (this.isDragging && this.selectedElement) {
-            e.preventDefault();
-            const coord = this.getMousePos(e);
-
-            // Check for NaN
-            if (isNaN(coord.x) || isNaN(coord.y)) {
-                console.error('MouseMove: Coord is NaN', coord);
-                return;
-            }
-
-            const x = coord.x - this.dragOffset.x;
-            const y = coord.y - this.dragOffset.y;
-
-            console.log('MouseMove: Moving to', { x, y });
-
-            this.selectedElement.setAttribute('transform', `translate(${x}, ${y})`);
-
-            // Calculate delta
-            const dx = x - this.prevPlayerPos.x;
-            const dy = y - this.prevPlayerPos.y;
-
-            // Move entire route rigidly
-            this.moveRoutesForPlayer(this.selectedElement.id, dx, dy);
-
-            // Update prev pos
-            this.prevPlayerPos = { x, y };
-        }
-    }
-
-    moveRoutesForPlayer(playerId, dx, dy) {
-        const routes = this.routesLayer.querySelectorAll(`path[data-player-id="${playerId}"]`);
-        routes.forEach(route => {
-            const d = route.getAttribute('d');
-            // Regex to match command (M or L) followed by coordinates
-            // Handles comma or space separators
-            const newD = d.replace(/([ML])\s*(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)/g, (match, cmd, px, py) => {
-                return `${cmd}${parseFloat(px) + dx},${parseFloat(py) + dy}`;
+        // Color Buttons
+        this.propertiesPanel.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const color = e.target.dataset.color;
+                this.updateElementColor(color);
             });
-            route.setAttribute('d', newD);
         });
     }
 
-    onMouseUp(e) {
-        this.isDragging = false;
-        this.selectedElement = null;
-    }
+    setLocked(locked) {
+        this.isLocked = locked;
+        if (this.lockIndicator) {
+            this.lockIndicator.textContent = locked ? 'Locked' : 'Editing';
+            this.lockIndicator.className = locked ? 'badge' : 'badge badge-warning';
+        }
+        if (this.toggleLockBtn) {
+            this.toggleLockBtn.textContent = locked ? 'Unlock to Edit' : 'Save & Lock';
+            this.toggleLockBtn.className = locked ? 'btn-primary' : 'btn-success'; // Visual cue
+        }
 
-    toggleRouteMode(forceState = null) {
-        if (forceState !== null) {
-            this.isDrawing = forceState;
+        if (locked) {
+            this.deselectPlayer();
+            this.svg.style.cursor = 'default';
         } else {
-            this.isDrawing = !this.isDrawing;
-        }
-        this.svg.style.cursor = this.isDrawing ? 'crosshair' : 'default';
-        return this.isDrawing;
-    }
-
-    onCanvasClick(e) {
-        if (!this.isDrawing) return;
-
-        const coord = this.getMousePos(e);
-
-        // Case 1: Start Route (Click on a player)
-        if (!this.currentRoute && e.target.closest('.draggable')) {
-            const playerGroup = e.target.closest('.draggable');
-            // Generate a unique ID for the player if not exists
-            if (!playerGroup.id) playerGroup.id = 'p_' + Date.now();
-
-            this.activePlayerId = playerGroup.id;
-
-            // Create new path element
-            this.currentRoute = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            this.currentRoute.setAttribute('class', 'route-path');
-            this.currentRoute.setAttribute('d', `M${coord.x},${coord.y}`);
-            this.currentRoute.dataset.playerId = this.activePlayerId;
-
-            this.routesLayer.appendChild(this.currentRoute);
-            return;
-        }
-
-        // Case 2: Continue Route (Click on field)
-        if (this.currentRoute) {
-            const d = this.currentRoute.getAttribute('d');
-            this.currentRoute.setAttribute('d', `${d} L${coord.x},${coord.y}`);
-            const arrowId = this.currentRoute.dataset.arrowId;
-            const arrow = this.routesLayer.querySelector(`polygon[data-route-id="${arrowId}"]`);
-            if (arrow) this.updateRouteArrow(this.currentRoute, arrow);
+            this.svg.style.cursor = 'crosshair';
         }
     }
 
-    updateRouteArrow(route, arrow) {
-        // Calculate angle of last segment and position/rotate arrow
-        const d = route.getAttribute('d');
-        if (!d || !arrow) return;
-
-        // Parse path commands to get last two points
-        const commands = d.match(/[ML]\s*(-?\d+\.?\d*)\s*,?\s*(-?\d+\.?\d*)/g);
-        if (!commands || commands.length < 2) return;
-
-        // Get last two points
-        const lastTwo = commands.slice(-2);
-        const parsePoint = (cmd) => {
-            const match = cmd.match(/(-?\d+\.?\d*)\s*,?\s*(-?\d+\.?\d*)/);
-            return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
-        };
-
-        const p1 = parsePoint(lastTwo[0]);
-        const p2 = parsePoint(lastTwo[1]);
-
-        // Calculate angle in degrees
-        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
-
-        // Position arrow at end point and rotate it
-        arrow.setAttribute('transform', `translate(${p2.x}, ${p2.y}) rotate(${angle}) translate(-5, -5)`);
+    loadData(play) {
+        this.clear();
+        if (play.players) {
+            play.players.forEach(p => {
+                this.renderPlayer(p);
+                if (p.route && p.route.length > 0) {
+                    this.renderRoute(p);
+                }
+            });
+        }
     }
 
-    finishRoute() {
-        this.isDrawing = false;
-        this.currentRoute = null;
-        this.activePlayerId = null;
-        this.svg.style.cursor = 'default';
+    getData() {
+        // Collect players from DOM to ensure positions are current
+        const players = [];
+        Array.from(this.playersLayer.children).forEach(g => {
+            const circle = g.querySelector('circle');
+            const text = g.querySelector('text');
+            const id = g.dataset.id;
+            const routeId = g.dataset.routeId;
+
+            // Reconstruct route data
+            const routePoints = this.getRoutePoints(routeId);
+
+            players.push({
+                id: id,
+                type: 'offense',
+                x: parseFloat(circle.getAttribute('cx')),
+                y: parseFloat(circle.getAttribute('cy')),
+                color: circle.getAttribute('fill'),
+                label: text ? text.textContent : '',
+                route: routePoints
+            });
+        });
+
+        return { players, routes: [] }; // Routes are now attached to players
+    }
+
+    getRoutePoints(routeId) {
+        const polyline = document.getElementById(routeId);
+        if (!polyline) return [];
+
+        const pointsStr = polyline.getAttribute('points');
+        if (!pointsStr) return [];
+
+        return pointsStr.trim().split(' ').map(pair => {
+            const [x, y] = pair.split(',');
+            return { x: parseFloat(x), y: parseFloat(y) };
+        });
     }
 
     clear() {
         this.playersLayer.innerHTML = '';
         this.routesLayer.innerHTML = '';
+        this.deselectPlayer();
     }
 
-    exportData() {
-        const players = [];
-        this.playersLayer.childNodes.forEach(node => {
-            if (node.nodeType === 1) {
-                players.push({
-                    id: node.id,
-                    type: node.dataset.type,
-                    transform: node.getAttribute('transform'),
-                    color: node.dataset.color // Save color
-                });
-            }
-        });
+    // --- Interaction Handlers ---
 
-        const routes = [];
-        this.routesLayer.childNodes.forEach(node => {
-            if (node.nodeType === 1) {
-                routes.push({
-                    d: node.getAttribute('d'),
-                    playerId: node.dataset.playerId,
-                    stroke: node.style.stroke // Save route color
-                });
-            }
-        });
+    handleMouseDown(e) {
+        if (this.isLocked) return;
 
-        return { players, routes };
+        const target = e.target;
+        // Check if hitting a player group or circle
+        const playerGroup = target.closest('g.player-group');
+
+        if (playerGroup) {
+            this.isDragging = true;
+            this.draggedElement = playerGroup;
+
+            const pt = this.getPointFromEvent(e);
+            const circle = playerGroup.querySelector('circle');
+            const cx = parseFloat(circle.getAttribute('cx'));
+            const cy = parseFloat(circle.getAttribute('cy'));
+
+            this.dragOffset = { x: pt.x - cx, y: pt.y - cy };
+
+            // Select on mouse down
+            const playerId = playerGroup.dataset.id;
+            // Find player data object (reconstruct it or reuse)
+            const player = {
+                id: playerId,
+                element: playerGroup,
+                routeId: playerGroup.dataset.routeId
+            };
+            this.selectPlayer(player);
+
+            e.stopPropagation(); // Prevent canvas click
+        }
     }
 
-    loadData(data) {
-        this.clear();
-        if (data.players) {
-            data.players.forEach(p => {
-                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                group.setAttribute('class', 'draggable');
-                group.setAttribute('transform', p.transform);
-                group.dataset.type = p.type;
-                if (p.id) group.id = p.id;
-                if (p.color) group.dataset.color = p.color; // Restore color
+    handleMouseMove(e) {
+        if (this.isLocked || !this.isDragging || !this.draggedElement) return;
 
-                if (p.type === 'offense') {
-                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                    circle.setAttribute('cx', '0');
-                    circle.setAttribute('cy', '0');
-                    circle.setAttribute('r', '20');
-                    circle.setAttribute('fill', 'white');
-                    circle.setAttribute('stroke', p.color || '#6366f1');
-                    circle.setAttribute('stroke-width', '4');
-                    circle.setAttribute('class', 'player-circle');
-                    group.appendChild(circle);
-                } else if (p.type === 'defense') {
-                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    path.setAttribute('d', 'M-15,-15 L15,15 M15,-15 L-15,15');
-                    path.setAttribute('stroke', p.color || '#ef4444');
-                    path.setAttribute('stroke-width', '4');
-                    path.setAttribute('class', 'player-cross');
-                    group.appendChild(path);
-                } else if (p.type === 'ball') {
-                    const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-                    ellipse.setAttribute('rx', 8);
-                    ellipse.setAttribute('ry', 12);
-                    ellipse.setAttribute('class', 'ball');
-                    group.appendChild(ellipse);
-                }
-                this.playersLayer.appendChild(group);
-            });
+        const pt = this.getPointFromEvent(e);
+        const newX = pt.x - this.dragOffset.x;
+        const newY = pt.y - this.dragOffset.y;
+
+        // Update Circle
+        const circle = this.draggedElement.querySelector('circle');
+        circle.setAttribute('cx', newX);
+        circle.setAttribute('cy', newY);
+
+        // Update Label
+        const text = this.draggedElement.querySelector('text');
+        if (text) {
+            text.setAttribute('x', newX);
+            text.setAttribute('y', newY); // approx center
         }
 
-        if (data.routes) {
-            data.routes.forEach(r => {
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                path.setAttribute('class', 'route-path');
-                path.setAttribute('d', r.d);
-                if (r.playerId) path.dataset.playerId = r.playerId;
-                if (r.stroke) path.style.stroke = r.stroke; // Restore route color
-                this.routesLayer.appendChild(path);
-            });
+        // Update Route Start Point
+        if (this.mode !== 'formation') {
+            this.updateRouteStart(this.draggedElement.dataset.routeId, newX, newY);
         }
+    }
+
+    handleMouseUp(e) {
+        this.isDragging = false;
+        this.draggedElement = null;
+    }
+
+    handleCanvasClick(e) {
+        if (this.isLocked) return;
+
+        // If we were dragging, ignore click logic (simple check)
+        // Ideally checking if mouse moved significantly
+        if (this.isDragging) return;
+
+        // Check if clicking field (not a player)
+        // Check if target is rect (field) or svg itself
+        if (e.target.tagName === 'rect' || e.target.id === 'play-canvas') {
+            if (this.selectedPlayer) {
+                if (this.mode === 'formation') return; // No routes in formation mode
+
+                // Add route point
+                const pt = this.getPointFromEvent(e);
+                this.addRoutePoint(this.selectedPlayer, pt);
+            }
+        }
+    }
+
+    // --- Player Management ---
+
+    addPlayer(type) {
+        if (this.isLocked) return;
+
+        const id = 'p_' + Date.now();
+        const routeId = 'r_' + id;
+        const x = 400; // Center
+        const y = 300;
+
+        const player = {
+            id, type, x, y, color: '#1f2937', label: '', route: []
+        };
+
+        this.renderPlayer(player);
+
+        const playerObj = {
+            id,
+            element: this.playersLayer.querySelector(`[data-id="${id}"]`),
+            routeId
+        };
+        this.selectPlayer(playerObj);
+    }
+
+    renderPlayer(player) {
+        // Create Group
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'player-group');
+        g.setAttribute('data-id', player.id);
+
+        // Ensure route ID exists
+        const routeId = player.routeId || ('r_' + player.id);
+        g.setAttribute('data-routeId', routeId);
+
+        // Circle
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', player.x);
+        circle.setAttribute('cy', player.y);
+        circle.setAttribute('r', 15);
+        circle.setAttribute('stroke', player.color || '#1f2937');
+        circle.setAttribute('stroke-width', '3');
+        circle.setAttribute('fill', player.color || '#1f2937'); // Solid fill
+        circle.setAttribute('fill-opacity', '1');
+
+        // Text
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', player.x);
+        text.setAttribute('y', player.y);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dy', '.3em');
+        text.textContent = player.label || '';
+        text.setAttribute('fill', '#ffffff'); // White text on filled circle
+        text.style.pointerEvents = 'none';
+
+        g.appendChild(circle);
+        g.appendChild(text);
+
+        // Append to layer
+        this.playersLayer.appendChild(g);
+
+        // Create initial route element if needed
+        let polyline = document.getElementById(routeId);
+        if (!polyline) {
+            polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            polyline.setAttribute('id', routeId);
+            polyline.setAttribute('stroke', player.color || '#1f2937');
+            polyline.setAttribute('stroke-width', '2');
+            polyline.setAttribute('fill', 'none');
+
+            // Add marker
+            const colorHex = (player.color || '#1f2937').replace('#', '');
+            // Try to find matching marker, fallback if logic complex
+            polyline.setAttribute('marker-end', `url(#arrowhead-${colorHex})`);
+
+            this.routesLayer.appendChild(polyline);
+        }
+    }
+
+    renderRoute(player) {
+        // Redraw route from data
+        const routeId = 'r_' + player.id;
+        // Check if polyline exists (created in renderPlayer usually)
+        let polyline = document.getElementById(routeId);
+
+        let points = [`${player.x},${player.y}`];
+        if (player.route) {
+            player.route.forEach(p => points.push(`${p.x},${p.y}`));
+        }
+        polyline.setAttribute('points', points.join(' '));
+    }
+
+    selectPlayer(playerObj) {
+        // Deselect previous
+        this.deselectPlayer();
+
+        this.selectedPlayer = playerObj;
+
+        // Visual indicator
+        const circle = playerObj.element.querySelector('circle');
+        if (circle) {
+            // Use white stroke with shadow-like effect or just contrast
+            // Simple: thick white border, but that might blend with field? 
+            // Let's use Cyal/Teal contrast or keep black but solid
+            circle.setAttribute('stroke', '#ffffff');
+            circle.setAttribute('stroke-width', '4');
+            // Adding a filter or second ring would be better but keeping it simple for now:
+            // Let's make it look "selected" by being slightly larger stroke and white
+        }
+
+        // Show panel
+        if (this.propertiesPanel) {
+            this.propertiesPanel.classList.remove('hidden');
+        }
+        const title = document.getElementById('prop-title');
+        if (title) title.textContent = 'Edit Player';
+    }
+
+    deselectPlayer() {
+        if (this.selectedPlayer && this.selectedPlayer.element) {
+            const circle = this.selectedPlayer.element.querySelector('circle');
+            // Restore style
+            const fill = circle.getAttribute('fill');
+            if (circle) {
+                circle.setAttribute('stroke', fill); // Stroke matches fill again
+                circle.setAttribute('stroke-width', '3'); // Back to normal width
+                circle.setAttribute('stroke-dasharray', ''); // Ensure no dash
+            }
+            this.selectedPlayer = null;
+        }
+        if (this.propertiesPanel) {
+            this.propertiesPanel.classList.add('hidden');
+        }
+    }
+
+    deletePlayer(id) {
+        const p = this.playersLayer.querySelector(`[data-id="${id}"]`);
+        if (p) p.remove();
+        const r = document.getElementById('r_' + id);
+        if (r) r.remove();
+    }
+
+    updateElementColor(color) {
+        if (this.selectedPlayer) {
+            const circle = this.selectedPlayer.element.querySelector('circle');
+            circle.setAttribute('stroke', color);
+            circle.setAttribute('fill', color);
+
+            // Update Route Color
+            const route = document.getElementById(this.selectedPlayer.routeId);
+            if (route) {
+                route.setAttribute('stroke', color);
+                const hex = color.replace('#', '');
+                route.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+            }
+        }
+    }
+
+    // --- Route Logic ---
+
+    addRoutePoint(playerObj, point) {
+        const polyline = document.getElementById(playerObj.routeId);
+        if (!polyline) return;
+
+        let points = polyline.getAttribute('points') || '';
+
+        // If empty, start at player pos
+        if (!points) {
+            const circle = playerObj.element.querySelector('circle');
+            const cx = circle.getAttribute('cx');
+            const cy = circle.getAttribute('cy');
+            points = `${cx},${cy}`;
+        }
+
+        points += ` ${point.x},${point.y}`;
+        polyline.setAttribute('points', points);
+    }
+
+    updateRouteStart(routeId, x, y) {
+        const polyline = document.getElementById(routeId);
+        if (!polyline) return;
+
+        let points = polyline.getAttribute('points');
+        if (!points) return; // No route yet
+
+        const coords = points.trim().split(' '); // Trim to avoid empty strings
+        if (coords.length > 0) {
+            coords[0] = `${x},${y}`;
+            polyline.setAttribute('points', coords.join(' '));
+        }
+    }
+
+    undoLastRoutePoint(playerObj) {
+        const polyline = document.getElementById(playerObj.routeId);
+        let points = polyline.getAttribute('points');
+        if (!points) return;
+
+        const coords = points.trim().split(' ');
+        if (coords.length > 1) {
+            // Keep at least the start point?
+            // If we only have start point + 1 point, reducing to start point essentially "clears" the visible route segment
+            coords.pop();
+            polyline.setAttribute('points', coords.join(' '));
+        }
+    }
+
+    getPointFromEvent(e) {
+        const pt = this.svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        return pt.matrixTransform(this.svg.getScreenCTM().inverse());
     }
 }
