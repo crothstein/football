@@ -11,7 +11,7 @@ export class Editor {
 
         // UI References
         this.propertiesPanel = document.getElementById('properties-panel');
-        this.lockIndicator = document.getElementById('lock-indicator');
+        // this.lockIndicator = document.getElementById('lock-indicator'); // Removed
         this.toggleLockBtn = document.getElementById('toggle-lock-btn');
         this.editorTools = document.getElementById('editor-tools'); // The bottom toolbar
         this.saveBtn = document.getElementById('save-play');
@@ -20,9 +20,15 @@ export class Editor {
         this.handleMouseDown = this.handleMouseDown.bind(this);
         this.handleMouseMove = this.handleMouseMove.bind(this);
         this.handleMouseUp = this.handleMouseUp.bind(this);
+        this.handleMouseUp = this.handleMouseUp.bind(this);
         this.handleCanvasClick = this.handleCanvasClick.bind(this);
 
+        this.ui = null; // Will be injected
         this.mode = 'play'; // 'play' | 'formation'
+    }
+
+    setUI(uiInstance) {
+        this.ui = uiInstance;
     }
 
     setMode(mode) {
@@ -42,6 +48,48 @@ export class Editor {
 
         this.bindPanelEvents();
         // this.bindLockEvent(); // Handled by App
+        this.drawField();
+    }
+
+    drawField() {
+        // Field Layer is usually the first child or search for ID
+        const fieldGroup = document.getElementById('field-layer');
+        if (!fieldGroup) return;
+
+        // Clear existing lines if any (keep the rect)
+        // actually, let's just re-create the inner content to be safe and clean
+        fieldGroup.innerHTML = '';
+
+        // 1. White Background
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('width', '800');
+        rect.setAttribute('height', '600');
+        rect.setAttribute('fill', '#ffffff');
+        fieldGroup.appendChild(rect);
+
+        // 2. Lines
+        // Center (LOS) - Dark Grey
+        this.createLine(fieldGroup, 0, 300, 800, 300, '#9ca3af', 4);
+
+        // Flanking Lines - Light Grey (e.g., 10 yards out? assuming 300 is center)
+        // Let's place them at y=150 and y=450 for specific "zone" feel or standard distance
+        // Mock shows good spacing. 600px height. 
+        this.createLine(fieldGroup, 0, 150, 800, 150, '#e5e7eb', 2);
+        this.createLine(fieldGroup, 0, 450, 800, 450, '#e5e7eb', 2);
+
+        // Maybe two more? 0 and 600 are borders.
+        // Let's stick to 3 lines for clean look as requested: "middle... two lighter gray lines below and above"
+    }
+
+    createLine(parent, x1, y1, x2, y2, color, width) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-width', width);
+        parent.appendChild(line);
     }
 
     bindLockEvent() {
@@ -96,13 +144,11 @@ export class Editor {
 
     setLocked(locked) {
         this.isLocked = locked;
+        // UI updates handled by App class now
+
         if (this.lockIndicator) {
             this.lockIndicator.textContent = locked ? 'Locked' : 'Editing';
             this.lockIndicator.className = locked ? 'badge' : 'badge badge-warning';
-        }
-        if (this.toggleLockBtn) {
-            this.toggleLockBtn.textContent = locked ? 'Unlock to Edit' : 'Save & Lock';
-            this.toggleLockBtn.className = locked ? 'btn-primary' : 'btn-success'; // Visual cue
         }
 
         if (locked) {
@@ -235,21 +281,27 @@ export class Editor {
     }
 
     handleCanvasClick(e) {
-        if (this.isLocked) return;
+        if (this.isLocked) {
+            console.log('Editor: Locked click, calling snackbar', this.ui);
+            if (this.ui) this.ui.showSnackbar("Click edit to start making edits");
+            return;
+        }
 
-        // If we were dragging, ignore click logic (simple check)
-        // Ideally checking if mouse moved significantly
         if (this.isDragging) return;
 
-        // Check if clicking field (not a player)
-        // Check if target is rect (field) or svg itself
-        if (e.target.tagName === 'rect' || e.target.id === 'play-canvas') {
-            if (this.selectedPlayer) {
-                if (this.mode === 'formation') return; // No routes in formation mode
+        // Check valid field targets
+        const isField = e.target.id === this.svg.id || e.target.id === 'field-layer' || e.target.tagName === 'rect';
 
-                // Add route point
+        if (isField) {
+            if (this.selectedPlayer) {
+                // If player is selected, clicking field adds a route point
+                if (this.mode === 'formation') return;
+
                 const pt = this.getPointFromEvent(e);
                 this.addRoutePoint(this.selectedPlayer, pt);
+            } else {
+                // If no player selected, clicking field ensures deselect (clean state)
+                this.deselectPlayer();
             }
         }
     }

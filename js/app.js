@@ -1,15 +1,16 @@
-import { Editor } from './editor.js?v=2';
-import { Store } from './store.js?v=2';
-import { UI } from './ui.js?v=3';
-import { getFormations } from './formations.js?v=2';
-import { AuthManager } from './auth.js?v=2';
+import { Editor } from './editor.js?v=12';
+import { Store } from './store.js?v=12';
+import { UI } from './ui.js?v=12';
+import { getFormations } from './formations.js?v=12';
+import { AuthManager } from './auth.js?v=12';
 
 class App {
     constructor() {
         this.auth = new AuthManager();
         this.store = new Store();
         this.editor = new Editor('play-canvas');
-        this.ui = new UI(this.store, this.editor, this);
+        this.ui = new UI(this.store, this); // Pass app reference to UI
+        this.editor.setUI(this.ui); // Inject UI for snackbar access
 
         this.currentPlaybook = null;
         this.currentPlay = null;
@@ -58,6 +59,61 @@ class App {
     async initializeApp() {
         this.editor.init();
 
+        // Check for template_id in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const templateId = urlParams.get('template_id');
+
+        if (templateId) {
+            console.log('Loading template:', templateId);
+            try {
+                const templatePlay = await this.store.getPublicPlay(templateId);
+
+                if (templatePlay) {
+                    // We have the play data. We want to open it as a "New Play" (unsaved) 
+                    // or force the user to "Save As".
+                    // Best flow: 
+                    // 1. Ensure we have a playbook (create one if needed? or use first?)
+                    // 2. Open Editor with this data but NO ID (so it saves as new).
+
+                    // Handle Playbooks
+                    let playbooks = await this.store.getPlaybooks();
+                    if (playbooks.length === 0) {
+                        // User has no playbooks, prompt create or switch view?
+                        // For now, let's open overview/create view but MAYBE pre-fill editor?
+                        // This is tricky. Let's just load it into the editor "Transient"ly if possible.
+                        // But App structure expects `currentPlaybook`.
+                        alert("Please create a playbook first to save this template.");
+                        this.switchView('create');
+                        return;
+                    }
+
+                    this.currentPlaybook = playbooks[0]; // Default to first
+                    this.switchView('editor');
+
+                    // Prepare "Copy" of play
+                    const playCopy = {
+                        ...templatePlay,
+                        id: 'new_template_' + Date.now(),
+                        name: templatePlay.name + ' (Copy)'
+                    };
+
+                    this.currentPlay = playCopy;
+                    this.editor.setMode('play');
+                    this.editor.loadData(playCopy);
+
+                    // Update UI inputs
+                    document.getElementById('play-name').value = playCopy.name;
+                    this.editor.setLocked(false); // Let them edit immediately
+                    this.ui.showSnackbar("Template loaded! Click Save to add it to your playbook.");
+
+                    this.initEventListeners();
+                    return; // parsing template overrides default load
+                }
+            } catch (err) {
+                console.error("Error loading template:", err);
+            }
+        }
+
         // Helper to check playbooks and route
         const playbooks = await this.store.getPlaybooks();
         if (playbooks.length > 0) {
@@ -66,10 +122,17 @@ class App {
             this.switchView('create');
         }
 
-        this.bindEvents();
+        this.initEventListeners();
     }
 
-    bindAuthEvents() {
+    checkUnsavedChanges() {
+        if (!this.editor.isLocked) {
+            return confirm("You have unsaved changes. Are you sure you want to leave? Your changes will be lost.");
+        }
+        return true;
+    }
+
+    initEventListeners() {
         // Auth Toggles
         const toSignup = document.getElementById('link-to-signup');
         const toLogin = document.getElementById('link-to-login');
@@ -125,6 +188,8 @@ class App {
                 }
             });
         }
+
+        this.bindEvents();
     }
 
     // Toggle between Login and Signup forms
@@ -200,65 +265,145 @@ class App {
             });
         }
 
-        const navNewPlay = document.getElementById('nav-new-play');
-        if (navNewPlay) {
-            navNewPlay.addEventListener('click', () => {
-                this.handleNewPlay();
-            });
-        }
 
-        const navEditFormation = document.getElementById('nav-edit-formation');
-        if (navEditFormation) {
-            navEditFormation.addEventListener('click', () => {
-                this.handleEditDefaultFormation();
-            });
-        }
 
         // Header New Play button
         const headerNewPlay = document.getElementById('header-new-play-btn');
         if (headerNewPlay) {
             headerNewPlay.addEventListener('click', () => {
-                this.handleNewPlay();
+                if (this.checkUnsavedChanges()) this.handleNewPlay();
             });
         }
 
         const backBtn = document.getElementById('back-to-book');
         if (backBtn) {
             backBtn.addEventListener('click', () => {
+                if (!this.checkUnsavedChanges()) return;
+
+                const wasEditingDefault = this.isEditingDefaultFormation;
+                const shouldReturn = this.returnToSettings; // Check flag
+
                 this.switchView('overview');
                 this.currentPlay = null;
                 this.isEditingDefaultFormation = false; // Reset
-                this.editor.clear();
+                this.returnToSettings = false; // Reset
+
+                // FORCE RESET EDITOR STATE
+                this.editor.setLocked(true);
+                this.editor.clear(); // Clear canvas
+
+                // Reset Lock Button UI
+                const toggleLockBtn = document.getElementById('toggle-lock-btn');
+                const lockText = toggleLockBtn.querySelector('.lock-text');
+                const deletePlayBtn = document.getElementById('btn-delete-play');
+
+                if (toggleLockBtn) {
+                    // if (lockIcon) lockIcon.textContent = '🔒'; // Reset icon
+                    if (lockText) lockText.textContent = 'Edit';
+                    toggleLockBtn.classList.remove('btn-warning');
+                    toggleLockBtn.classList.add('btn-primary');
+                }
+                // if (deletePlayBtn) deletePlayBtn.style.display = 'none'; // Removed - container hides anyway
+
                 this.ui.renderPlaybookOverview(this.currentPlaybook);
+
+                // If we were editing default formation from settings workflow, reopen modal
+                if (wasEditingDefault && shouldReturn) {
+                    this.ui.openPlaybookSettings();
+                }
             });
         }
 
         // Editor Actions (Save & Lock Logic)
         const toggleLockBtn = document.getElementById('toggle-lock-btn');
-        if (toggleLockBtn) {
-            toggleLockBtn.addEventListener('click', () => {
-                if (this.editor.isLocked) {
-                    // Unlock
-                    this.editor.setLocked(false);
-                } else {
-                    // Save & Lock
-                    if (this.isEditingDefaultFormation) {
-                        this.saveDefaultFormation();
-                    } else {
-                        this.saveCurrentPlay();
+        const deletePlayBtn = document.getElementById('btn-delete-play');
+
+        // Delete Play Logic
+        if (deletePlayBtn) {
+            deletePlayBtn.addEventListener('click', async () => {
+                if (!this.currentPlay) return;
+
+                const confirmDelete = confirm(`Are you sure you want to delete "${this.currentPlay.name || 'this play'}"? This action cannot be undone.`);
+                if (!confirmDelete) return;
+
+                try {
+                    await this.store.deletePlay(this.currentPlay.id);
+
+                    // Update Local State: Remove play from currentPlaybook
+                    if (this.currentPlaybook && this.currentPlaybook.plays) {
+                        this.currentPlaybook.plays = this.currentPlaybook.plays.filter(p => p.id !== this.currentPlay.id);
                     }
-                    this.editor.setLocked(true);
+
+                    // Force navigation back without checking unsaved changes (since deleted)
+                    this.hasUnsavedChanges = false;
+                    this.editor.setLocked(true); // Reset state
+                    document.getElementById('back-to-book').click();
+                } catch (err) {
+                    alert('Error deleting play: ' + err.message);
                 }
             });
         }
 
-        // Print Button
-        const printBtn = document.getElementById('print-play');
+        if (toggleLockBtn) {
+            toggleLockBtn.addEventListener('click', () => {
+                // const lockIcon = toggleLockBtn.querySelector('.lock-icon'); // Removed
+                const lockText = toggleLockBtn.querySelector('.lock-text');
+
+                if (this.editor.isLocked) {
+                    // Unlock -> Edit Mode
+                    this.editor.setLocked(false);
+                    // if (lockIcon) lockIcon.textContent = '🔓'; // Removed
+                    if (lockText) lockText.textContent = 'Save';
+
+                    toggleLockBtn.classList.add('btn-warning');
+                    toggleLockBtn.classList.remove('btn-primary'); // Was btn-icon-light
+
+                    // Delete Button is always visible now
+
+                } else {
+                    // Lock -> Save & ReadOnly Mode
+                    if (this.isEditingDefaultFormation) {
+                        this.saveDefaultFormation();
+                        if (this.returnToSettings) {
+                            // Back logic handles return
+                            document.getElementById('back-to-book').click();
+                            return;
+                        }
+                    } else {
+                        this.saveCurrentPlay();
+                    }
+                    this.editor.setLocked(true);
+
+                    // if (lockIcon) lockIcon.textContent = '🔒'; // Removed
+                    if (lockText) lockText.textContent = 'Edit';
+
+                    toggleLockBtn.classList.remove('btn-warning');
+                    toggleLockBtn.classList.add('btn-primary'); // Was btn-icon-light
+                    this.hasUnsavedChanges = false;
+
+                    // Delete Button is always visible now
+                }
+            });
+        }
+
+        // Print Button (Move to Overview)
+        const printBtn = document.getElementById('print-playbook-btn');
         if (printBtn) {
             printBtn.addEventListener('click', () => {
                 window.print();
             });
         }
+
+        // Removed old 'print-play' editor button listener logic
+
+        // Window Unload Protection
+        window.onbeforeunload = (e) => {
+            if (!this.editor.isLocked) { // Using lock status as proxy for "editing session"
+                // Browsers usually ignore the custom message, but this triggers the dialog
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
 
         // User Profile & Logout
         const profileBtn = document.getElementById('user-profile-btn');
@@ -352,7 +497,9 @@ class App {
         if (!this.currentPlaybook) return;
 
         console.log('Editing default formation');
+        console.log('Editing default formation');
         this.isEditingDefaultFormation = true; // State flag
+        this.returnToSettings = true; // Flow flag: Return to settings modal on exit
 
         // Get current default or fallback to template
         let players = [];
@@ -422,13 +569,18 @@ class App {
             startingPlayers = template ? JSON.parse(JSON.stringify(template.players)) : [];
         }
 
+        // Calculate next order index to append to end
+        const currentPlays = this.currentPlaybook.plays || [];
+        const maxOrder = currentPlays.reduce((max, p) => Math.max(max, p.order || 0), -1);
+
         // Create new play object
         const newPlay = {
             // id: Date.now().toString(), // Let DB or save handle ID
             name: 'New Play',
             formation: 'Custom',
             players: startingPlayers,
-            routes: []
+            routes: [],
+            order: maxOrder + 1
         };
 
         // Save it immediately so it has an ID and exists
@@ -466,6 +618,10 @@ class App {
         // Reset UI for Play Mode
         document.getElementById('play-name').style.display = 'block';
         document.getElementById('formation-editor-title').style.display = 'none';
+
+        // Ensure Delete Button is visible
+        const deletePlayBtn = document.getElementById('btn-delete-play');
+        if (deletePlayBtn) deletePlayBtn.style.display = 'inline-block';
 
         // Load into editor
         this.editor.loadData(play);

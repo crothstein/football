@@ -446,7 +446,10 @@ body {
 
 /* Dark Overlay for Create View */
 .dark-overlay {
-    background-color: #1f2937;
+    background-color: rgba(31, 41, 55, 0.75);
+    /* Semi-transparent Slate 900 */
+    backdrop-filter: blur(4px);
+    /* Optional: adds nice blur effect */
     /* Dark slate */
     display: flex;
     align-items: center;
@@ -960,7 +963,8 @@ body {
 
 .play-card-preview {
     height: 140px;
-    background: #f1f5f9;
+    background: transparent;
+    /* Was #f1f5f9 */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1009,10 +1013,7 @@ body {
     color: var(--text-muted);
 }
 
-/* Fix Top Bar for Editor View */
-#view-play-editor .top-bar {
-    /* reuse existing top-bar styles but ensure context */
-}
+
 
 .btn-small {
     padding: 0.25rem 0.5rem;
@@ -1024,12 +1025,33 @@ body {
     justify-content: space-between;
     margin-bottom: 0.5rem;
 }
+
 /* Sidebar Footer (User Profile) */
 .sidebar-footer {
-    margin-top: auto; /* Push to bottom */
+    margin-top: auto;
+    /* Push to bottom */
     padding-top: 15px;
     border-top: 1px solid var(--border);
-    position: relative; /* For popover positioning */
+    position: relative;
+    /* For popover positioning */
+}
+
+/* Drag and Drop Styles */
+.play-card.dragging {
+    opacity: 0.5;
+    border: 2px dashed var(--primary);
+    transform: scale(1.02);
+}
+
+.play-card.drag-over {
+    border-left: 4px solid var(--primary);
+    background: #f1f5f9;
+}
+
+.play-number {
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-right: 0.5rem;
 }
 
 .user-profile {
@@ -1048,7 +1070,8 @@ body {
 .user-avatar {
     width: 36px;
     height: 36px;
-    background-color: #e2e8f0; /* Fallback */
+    background-color: #e2e8f0;
+    /* Fallback */
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1086,7 +1109,8 @@ body {
 /* User Menu Popover */
 .user-menu {
     position: absolute;
-    bottom: 100%; /* Above footer */
+    bottom: 100%;
+    /* Above footer */
     left: 0;
     width: 100%;
     background-color: var(--bg-surface);
@@ -1100,8 +1124,15 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .menu-item.danger {
@@ -1121,7 +1152,8 @@ body {
 
 /* Light Theme Auth & Modals */
 .auth-overlay {
-    background-color: #f1f5f9; /* Light grey background */
+    background-color: #f1f5f9;
+    /* Light grey background */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1278,7 +1310,7 @@ body {
 .team-size-selector.light-theme .size-btn.active {
     background: white;
     color: var(--primary);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* Field Preview Light */
@@ -1290,4 +1322,300 @@ body {
 
 .full-width {
     width: 100%;
+}
+
+/* Playbook Settings Modal Specifics */
+.settings-modal {
+    background: white;
+    color: var(--text-main);
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    overflow: hidden;
+}
+
+.settings-modal .modal-header {
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem;
+    color: var(--text-main);
+}
+
+.settings-modal .modal-header h2 {
+    font-size: 1.25rem;
+}
+
+.settings-modal .btn-icon-light {
+    color: var(--text-muted);
+    border: none;
+}
+
+.settings-modal .btn-icon-light:hover {
+    background: #f1f5f9;
+    color: var(--text-main);
+}
+
+.settings-modal .modal-body {
+    padding: 1.5rem;
+    gap: 1.5rem;
+}
+
+.settings-modal .modal-section h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 1rem;
+}
+
+.settings-modal label.text-dark {
+    color: var(--text-main);
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    display: block;
+    text-transform: none;
+    /* Override uppercase if needed */
+}
+
+.light-input-bg {
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 0.75rem;
+    border-radius: 6px;
+    width: 100%;
+    font-size: 1rem;
+    outline: none;
+}
+
+.light-input-bg:focus {
+    border-color: var(--primary);
+    background: white;
+}
+
+.preview-field-green {
+    /* Corrected to be neutral/clean for SVG */
+    background-color: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 100%;
+    height: 160px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.preview-field-green:hover .edit-overlay {
+    opacity: 1;
+}
+
+.edit-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.edit-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.btn-danger-block {
+    width: 100%;
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-danger-block:hover {
+    background: #dc2626;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    background: #fafafa;
+}
+
+.btn-outline-prof {
+    background: white;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-icon-light {
+    background: white;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Ensure icon and text are spaced */
+    font-size: 0.9rem;
+}
+
+.btn-outline-prof:hover {
+    background: #f1f5f9;
+}
+
+.btn-primary-prof {
+    background: #0f172a;
+    /* Slate 900 */
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-primary-prof:hover {
+    background: #1e293b;
+}
+
+/* Header Actions */
+.header-actions-right {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn-icon-dark {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Space between icon and text */
+}
+
+/* Ensure text is visible */
+.btn-icon-light .lock-text {
+    display: inline-block;
+    font-weight: 500;
+}
+
+.btn-icon-dark:hover {
+    background: #f1f5f9;
+    color: var(--text-main);
+}
+
+#playbook-settings-btn {
+    font-size: 1.5rem;
+    /* Larger icon */
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    /* Optional: add border to match button style if desired, or keep clean */
+    background: white;
+}
+
+#playbook-settings-btn:hover {
+    background: #f1f5f9;
+    border-color: var(--text-muted);
+}
+
+/* Snackbar */
+.snackbar {
+    visibility: hidden;
+    min-width: 250px;
+    margin-left: -125px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+    padding: 16px;
+    position: fixed;
+    z-index: 2000;
+    /* Ensure it's above everything */
+    left: 50%;
+    bottom: 30px;
+    font-size: 16px;
+    opacity: 0;
+    transition: opacity 0.3s, bottom 0.3s;
+}
+
+.snackbar.show {
+    visibility: visible;
+    opacity: 1;
+    bottom: 50px;
+}
+
+/* Lock Icon Button */
+.btn-icon-light .lock-icon {
+    font-size: 1.2rem;
+}
+
+.btn-warning {
+    background-color: #f59e0b;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-warning:hover {
+    background-color: #d97706;
+}
+
+.btn-ghost-danger {
+    background: transparent;
+    border: 1px solid transparent;
+    /* Ensure no border initially */
+    color: #ef4444 !important;
+    /* Force red */
+    cursor: pointer;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.btn-ghost-danger:hover {
+    background: #fef2f2;
+    border-color: #ef4444;
 }

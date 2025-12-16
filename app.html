@@ -13,6 +13,40 @@
 </head>
 
 <body>
+    <!-- Global SVG Definitions -->
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+        <defs>
+            <marker id="arrowhead-6366f1" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#6366f1" />
+            </marker>
+            <marker id="arrowhead-ef4444" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#ef4444" />
+            </marker>
+            <marker id="arrowhead-22c55e" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#22c55e" />
+            </marker>
+            <marker id="arrowhead-eab308" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#eab308" />
+            </marker>
+            <marker id="arrowhead-ec4899" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#ec4899" />
+            </marker>
+            <marker id="arrowhead-06b6d4" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#06b6d4" />
+            </marker>
+            <marker id="arrowhead-1f2937" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#1f2937" />
+            </marker>
+        </defs>
+    </svg>
+
     <div class="app-container">
 
         <!-- VIEW: Create Playbook (Modal Style) -->
@@ -59,6 +93,61 @@
                  The "X" button should probably go to Overview/Landing.
             -->
             <div id="existing-playbooks-list" class="hidden"></div> <!-- Keeping hidden for logic preservation -->
+        </div>
+
+        <!-- VIEW: Playbook Settings (Modal) -->
+        <div id="view-playbook-settings" class="view-section dark-overlay hidden">
+            <div class="modal-container settings-modal">
+                <div class="modal-header">
+                    <h2>Playbook Settings</h2>
+                    <button id="close-settings-modal" class="btn-icon-light">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-section">
+                        <h3>Playbook Name</h3>
+                        <div class="modal-field align-left">
+                            <input type="text" id="settings-playbook-name" class="light-input-bg"
+                                placeholder="Enter name...">
+                        </div>
+                    </div>
+
+                    <div class="modal-section">
+                        <h3 id="settings-default-formation-title">Default Formation</h3>
+                        <div class="formation-preview-container" id="settings-formation-preview">
+                            <!-- Field Graphic -->
+                            <div class="preview-field-green">
+                                <!-- Dynamic SVG will be injected here -->
+                                <div class="edit-overlay">
+                                    <div class="edit-icon">✎</div>
+                                    <div>Edit Default Formation</div>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted">Click the formation to customize default player positions</small>
+                    </div>
+
+                    <div class="modal-section" id="admin-options-container" style="display:none;">
+                        <h3>Admin Options</h3>
+                        <div class="modal-field-checkbox">
+                            <input type="checkbox" id="settings-is-public">
+                            <label for="settings-is-public">Make Public Template</label>
+                        </div>
+                    </div>
+
+                    <div class="modal-section">
+                        <h3>Actions</h3>
+                        <button id="btn-delete-playbook" class="btn-danger-block">
+                            Delete Playbook
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="close-settings-btn" class="btn-outline-prof">Close</button>
+                    <button id="save-settings-btn" class="btn-primary-prof">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Auth View -->
@@ -143,7 +232,7 @@
                     </div>
                 </div>
 
-                <div class="sidebar-menu">
+                <div class="sidebar-menu hidden">
                     <div class="menu-label">MAIN MENU</div>
                     <button id="nav-new-play" class="menu-item">
                         <span>+</span> New Play
@@ -153,7 +242,7 @@
                     </button>
                 </div>
 
-                <div class="sidebar-menu">
+                <div class="sidebar-menu hidden">
                     <div class="menu-label">TOOLS</div>
                     <button class="menu-item disabled">Analytics</button>
                     <button class="menu-item disabled">Settings</button>
@@ -179,12 +268,16 @@
                     <div class="header-title-area">
                         <!-- Breadcrumb or Title -->
                         <h1 id="header-playbook-name">Vikings 3/4</h1>
-                        <span class="header-subtitle">Offensive Playbook</span>
+                        <!-- <span class="header-subtitle">Offensive Playbook</span> -->
                     </div>
-                    <button id="header-new-play-btn" class="btn-dark small">+ New Play</button>
+                    <div class="header-actions-right">
+                        <button id="playbook-settings-btn" class="btn-icon-dark" title="Playbook Settings">⚙</button>
+                        <button id="print-playbook-btn" class="btn-icon-dark" title="Print Playbook">🖨</button>
+                        <button id="header-new-play-btn" class="btn-dark small">+ New Play</button>
+                    </div>
                 </div>
 
-                <div class="filter-bar">
+                <div class="filter-bar hidden">
                     <div class="search-wrapper">
                         <span class="search-icon">🔍</span>
                         <input type="text" id="play-search" placeholder="Search plays...">
@@ -213,11 +306,19 @@
                 <div class="play-info">
                     <input type="text" id="play-name" value="New Play" placeholder="Untitled Play">
                     <h2 id="formation-editor-title" style="display:none; margin: 0; color: #fff;">Default Formation</h2>
-                    <span id="lock-indicator" class="badge">Locked</span>
                 </div>
                 <div class="actions">
-                    <button id="toggle-lock-btn" class="btn-primary">Unlock to Edit</button>
-                    <button id="print-play" class="btn-ghost">Print</button>
+                    <button id="btn-play-details" class="btn-ghost" title="Play Settings"
+                        style="margin-right: 10px; font-size: 1.8rem; padding: 0 4px; line-height: 1;">
+                        ⚙
+                    </button>
+                    <button id="btn-delete-play" class="btn-ghost-danger" title="Delete Play"
+                        style="margin-right: 10px;">
+                        Delete
+                    </button>
+                    <button id="toggle-lock-btn" class="btn-primary" title="Toggle Lock">
+                        <span class="lock-text">Edit</span>
+                    </button>
                 </div>
             </header>
 
@@ -228,78 +329,82 @@
                     <div class="canvas-wrapper">
                         <svg id="play-canvas" width="800" height="600" viewBox="0 0 800 600"
                             xmlns="http://www.w3.org/2000/svg">
-                            <defs>
-                                <!-- Markers for each color (Filled triangle arrow) -->
-                                <marker id="arrowhead-6366f1" markerWidth="10" markerHeight="10" refX="5" refY="5"
-                                    orient="auto" markerUnits="strokeWidth">
-                                    <polygon points="0 0, 10 5, 0 10" fill="#6366f1" />
-                                </marker>
-                                <marker id="arrowhead-ef4444" markerWidth="10" markerHeight="10" refX="5" refY="5"
-                                    orient="auto" markerUnits="strokeWidth">
-                                    <polygon points="0 0, 10 5, 0 10" fill="#ef4444" />
-                                </marker>
-                                <marker id="arrowhead-22c55e" markerWidth="10" markerHeight="10" refX="5" refY="5"
-                                    orient="auto" markerUnits="strokeWidth">
-                                    <polygon points="0 0, 10 5, 0 10" fill="#22c55e" />
-                                </marker>
-                                <marker id="arrowhead-eab308" markerWidth="10" markerHeight="10" refX="5" refY="5"
-                                    orient="auto" markerUnits="strokeWidth">
-                                    <polygon points="0 0, 10 5, 0 10" fill="#eab308" />
-                                </marker>
-                                <marker id="arrowhead-ec4899" markerWidth="10" markerHeight="10" refX="5" refY="5"
-                                    orient="auto" markerUnits="strokeWidth">
-                                    <polygon points="0 0, 10 5, 0 10" fill="#ec4899" />
-                                </marker>
-                                <marker id="arrowhead-06b6d4" markerWidth="10" markerHeight="10" refX="5" refY="5"
-                                    orient="auto" markerUnits="strokeWidth">
-                                    <polygon points="0 0, 10 5, 0 10" fill="#06b6d4" />
-                                </marker>
-                                <marker id="arrowhead-1f2937" markerWidth="10" markerHeight="10" refX="5" refY="5"
-                                    orient="auto" markerUnits="strokeWidth">
-                                    <polygon points="0 0, 10 5, 0 10" fill="#1f2937" />
-                                </marker>
-                            </defs>
-                            <g id="field-layer">
-                                <rect width="800" height="600" fill="#ffffff" />
-                                <!-- Yard lines will be added by JS -->
-                            </g>
+                            <!-- Layers: Field, Routes, Players -->
+                            <!-- Note: Editor.js expects: field-layer, routes-layer, players-layer -->
+                            <g id="field-layer"></g>
                             <g id="routes-layer"></g>
                             <g id="players-layer"></g>
                         </svg>
                     </div>
-                </main>
             </div>
+            </main>
+        </div>
 
-            <!-- Bottom Toolbar: Tools -->
-            <!-- Hidden when locked -->
-            <!-- Bottom Toolbar REMOVED -->
+        <!-- Bottom Toolbar: Tools -->
+        <!-- Hidden when locked -->
+        <!-- Bottom Toolbar REMOVED -->
 
-            <!-- Properties Panel (Floating)  -->
-            <div id="properties-panel" class="properties-panel hidden">
-                <div class="panel-header">
-                    <span id="prop-title">Player Edit</span>
-                    <button id="finish-edit-player" class="btn-icon">✓</button>
+        <!-- Properties Panel (Floating)  -->
+        <div id="properties-panel" class="properties-panel hidden">
+            <div class="panel-header">
+                <span id="prop-title">Player Edit</span>
+                <button id="finish-edit-player" class="btn-icon">✓</button>
+            </div>
+            <div class="panel-body">
+                <div class="action-row">
+                    <button id="undo-change" class="btn-small">Undo</button>
+                    <button id="delete-element" class="btn-danger-outline btn-small">Delete</button>
                 </div>
-                <div class="panel-body">
-                    <div class="action-row">
-                        <button id="undo-change" class="btn-small">Undo</button>
-                        <button id="delete-element" class="btn-danger-outline btn-small">Delete</button>
-                    </div>
-                    <label>Color:</label>
-                    <div class="color-grid">
-                        <button class="color-btn" style="background: #6366f1" data-color="#6366f1"></button>
-                        <button class="color-btn" style="background: #ef4444" data-color="#ef4444"></button>
-                        <button class="color-btn" style="background: #22c55e" data-color="#22c55e"></button>
-                        <button class="color-btn" style="background: #eab308" data-color="#eab308"></button>
-                        <button class="color-btn" style="background: #ec4899" data-color="#ec4899"></button>
-                        <button class="color-btn" style="background: #06b6d4" data-color="#06b6d4"></button>
-                        <button class="color-btn" style="background: #1f2937" data-color="#1f2937"></button>
-                    </div>
+                <label>Color:</label>
+                <div class="color-grid">
+                    <button class="color-btn" style="background: #6366f1" data-color="#6366f1"></button>
+                    <button class="color-btn" style="background: #ef4444" data-color="#ef4444"></button>
+                    <button class="color-btn" style="background: #22c55e" data-color="#22c55e"></button>
+                    <button class="color-btn" style="background: #eab308" data-color="#eab308"></button>
+                    <button class="color-btn" style="background: #ec4899" data-color="#ec4899"></button>
+                    <button class="color-btn" style="background: #06b6d4" data-color="#06b6d4"></button>
+                    <button class="color-btn" style="background: #1f2937" data-color="#1f2937"></button>
                 </div>
             </div>
         </div>
 
-        <script type="module" src="js/app.js"></script>
+        <!-- VIEW: Play Settings Modal -->
+        <div id="modal-play-settings" class="dark-overlay hidden">
+            <div class="modal-container settings-modal">
+                <div class="modal-header">
+                    <h2>Play Details</h2>
+                    <button id="close-play-settings" class="btn-icon-light">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-section">
+                        <h3>Play Name</h3>
+                        <div class="modal-field align-left">
+                            <input type="text" id="setting-play-name" class="light-input-bg"
+                                placeholder="Enter play name...">
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <h3>Description</h3>
+                        <div class="modal-field align-left">
+                            <textarea id="setting-play-desc" class="light-input-bg" rows="4"
+                                placeholder="Describe the play's strategy..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary-prof" id="save-play-settings">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Snackbar for notifications -->
+    <div id="snackbar" class="snackbar hidden">Click edit to start making edits</div>
+    <script type="module" src="js/formations.js?v=12"></script>
+    <script type="module" src="js/store.js?v=12"></script>
+    <script type="module" src="js/editor.js?v=12"></script>
+    <script type="module" src="js/ui.js?v=12"></script>
+    <script type="module" src="js/app.js?v=12"></script>
 </body>
 
 </html>

@@ -6,6 +6,11 @@ export class Store {
         // For V1, let's fetch fresh data to ensure consistency.
     }
 
+    async getCurrentUser() {
+        const { data: { user } } = await supabase.auth.getUser();
+        return user;
+    }
+
     // --- Playbooks ---
 
     async getPlaybooks() {
@@ -34,6 +39,7 @@ export class Store {
                 plays (*)
             `)
             .eq('id', id)
+            .order('order_index', { foreignTable: 'plays', ascending: true })
             .single();
 
         if (error) {
@@ -55,6 +61,8 @@ export class Store {
             owner_id: user.id,
             title: playbook.name, // Mapping 'name' to 'title' as per schema
             team_size: playbook.teamSize, // Mapping 'teamSize' to 'team_size'
+            default_formation: playbook.defaultFormation, // Add explicit column for default formation
+            is_public: playbook.isPublic || false, // Handle is_public flag
             updated_at: new Date().toISOString()
         };
 
@@ -111,9 +119,14 @@ export class Store {
         const payload = {
             playbook_id: playbookId,
             name: play.name,
+            description: play.description || '', // Save description
             data: playData,
             updated_at: new Date().toISOString()
         };
+
+        if (play.order !== undefined) {
+            payload.order_index = play.order;
+        }
 
         if (play.id && !play.id.startsWith('new_')) { // Check if it's a real UUID or temp
             // Update
@@ -139,6 +152,23 @@ export class Store {
         }
     }
 
+    async getPublicPlay(playId) {
+        // Fetch a play by ID without user auth check (relying on RLS or public policy)
+        // We technically need the playbook too to know if it is public?
+        // Or if the table view allows it.
+        const { data, error } = await supabase
+            .from('plays')
+            .select('*')
+            .eq('id', playId)
+            .single();
+
+        if (error) {
+            console.error('Error fetching public play:', error);
+            return null;
+        }
+        return this._mapPlay(data);
+    }
+
     async deletePlay(playId) {
         const { error } = await supabase
             .from('plays')
@@ -154,6 +184,8 @@ export class Store {
             id: dbRecord.id,
             name: dbRecord.title,
             teamSize: dbRecord.team_size,
+            defaultFormation: dbRecord.default_formation, // Map DB column
+            isPublic: dbRecord.is_public, // Map public flag
             plays: dbRecord.plays ? dbRecord.plays.map(p => this._mapPlay(p)) : []
         };
     }
@@ -164,7 +196,24 @@ export class Store {
         return {
             id: dbRecord.id,
             name: dbRecord.name,
+            description: dbRecord.description || '', // Map description
+            order: dbRecord.order_index || 0, // Map updated column
             ...dbRecord.data
         };
+    }
+
+    async savePlayOrder(playbookId, orderedPlayIds) {
+        // We need to update multiple rows. Supabase doesn't have a simple "upsert multiple with different values" 
+        // that is cleaner than individual updates or a custom RPC, unless we upsert the whole object.
+        // For simplicity and V1: Loop and update. (Batching would be better if many plays).
+
+        const updates = orderedPlayIds.map((id, index) => {
+            return supabase
+                .from('plays')
+                .update({ order_index: index, updated_at: new Date().toISOString() })
+                .eq('id', id);
+        });
+
+        await Promise.all(updates);
     }
 }

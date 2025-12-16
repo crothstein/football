@@ -1,9 +1,8 @@
 import { getFormations } from './formations.js';
 
 export class UI {
-    constructor(store, editor, app) {
+    constructor(store, app) {
         this.store = store;
-        this.editor = editor;
         this.app = app; // Reference to main app for callbacks
 
         // Element caching
@@ -14,8 +13,31 @@ export class UI {
         this.selectedTeamSizeInput = document.getElementById('selected-team-size');
         this.currentPlaybookNameEl = document.getElementById('current-playbook-name');
 
+        // Playbook Settings Modal
+        this.settingsModal = document.getElementById('view-playbook-settings');
+        this.settingsPlaybookNameInput = document.getElementById('settings-playbook-name');
+        this.settingsFormationPreview = document.getElementById('settings-formation-preview');
+        this.settingsDefaultFormationTitle = document.getElementById('settings-default-formation-title');
+
+        // Play Settings Modal (Play Name & Description)
+        this.playSettingsModal = document.getElementById('modal-play-settings');
+        this.playSettingsNameInput = document.getElementById('setting-play-name');
+        this.playSettingsDescInput = document.getElementById('setting-play-desc');
+        this.editorPlayNameInput = document.getElementById('play-name');
+
         // Header elements
         this.headerPlaybookName = document.getElementById('header-playbook-name');
+        const btnPlayDetails = document.getElementById('btn-play-details');
+        if (btnPlayDetails) {
+            btnPlayDetails.addEventListener('click', () => {
+                console.log('Open Play Settings Clicked', this.app.currentPlay);
+                if (!this.app.currentPlay) return;
+                // Populate modal
+                this.playSettingsNameInput.value = this.app.currentPlay.name || '';
+                this.playSettingsDescInput.value = this.app.currentPlay.description || '';
+                this.showModal(this.playSettingsModal);
+            });
+        }
         this.headerNewPlayBtn = document.getElementById('header-new-play-btn');
 
         this.initEventListeners();
@@ -28,6 +50,7 @@ export class UI {
                 const btn = e.target.closest('.size-btn');
                 if (!btn) return;
 
+                console.log('Team size button clicked:', btn.dataset.value); // Debug log
                 // Update UI
                 this.teamSizeSelector.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
@@ -40,6 +63,46 @@ export class UI {
                 // formations.js expects "5v5", "6v6", etc.
                 this.renderFormationOptions(size + 'v' + size);
             });
+        }
+
+        // Playbook Settings
+        const settingsBtn = document.getElementById('playbook-settings-btn');
+        if (settingsBtn) {
+            settingsBtn.onclick = () => this.openPlaybookSettings();
+        }
+
+        const closeSettingsBtn = document.getElementById('close-settings-modal');
+        if (closeSettingsBtn) {
+            closeSettingsBtn.onclick = () => this.closePlaybookSettings();
+        }
+
+        const closeSettingsBtnFooter = document.getElementById('close-settings-btn');
+        if (closeSettingsBtnFooter) closeSettingsBtnFooter.onclick = () => this.closePlaybookSettings();
+
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        if (saveSettingsBtn) saveSettingsBtn.onclick = () => this.savePlaybookSettings();
+
+        // Removed duplicate/old saveSettingsBtn check
+
+        const cancelSettingsBtn = document.getElementById('cancel-settings');
+        if (cancelSettingsBtn) {
+            cancelSettingsBtn.onclick = () => this.closePlaybookSettings();
+        }
+
+        const deletePlaybookBtn = document.getElementById('btn-delete-playbook');
+        if (deletePlaybookBtn) {
+            deletePlaybookBtn.onclick = () => this.deletePlaybookHandler();
+        }
+
+        // Play Settings Events
+        const btnSavePlaySettings = document.getElementById('save-play-settings');
+        if (btnSavePlaySettings) {
+            btnSavePlaySettings.onclick = () => this.savePlaySettings();
+        }
+
+        const btnClosePlaySettings = document.getElementById('close-play-settings');
+        if (btnClosePlaySettings) {
+            btnClosePlaySettings.onclick = () => this.hideModal(this.playSettingsModal);
         }
     }
 
@@ -129,30 +192,106 @@ export class UI {
         this.playsGridEl.innerHTML = '';
 
         if (plays.length === 0) {
-            this.playsGridEl.innerHTML = `
-                <div class="empty-state">
-                    <p>No plays in this playbook yet.</p>
-                </div>`;
-            return;
-        }
+            this.playsGridEl.innerHTML = '<div class="text-center text-muted" style="grid-column: 1/-1;">No plays yet. Click "New Play" to create one.</div>';
+        } else {
+            plays.forEach((play, index) => {
+                const card = document.createElement('div');
+                card.className = 'play-card';
+                card.draggable = true; // Enable drag
+                card.dataset.id = play.id;
 
-        plays.forEach(play => {
-            const card = document.createElement('div');
-            card.className = 'play-card';
-            // Placeholder for preview image if we had one
-            card.innerHTML = `
-                <div class="play-card-preview">
-                    <!-- SVG Preview could go here -->
-                    <div class="play-card-icon">🏈</div>
-                </div>
+                card.innerHTML = `
+                <div class="play-card-preview"></div>
                 <div class="play-card-info">
-                    <div class="play-name">${play.name || 'Untitled Play'}</div>
-                    <div class="play-meta">${play.formation || '-'}</div>
+                    <div class="play-name">
+                        <span class="play-number">${index + 1}.</span> 
+                        ${play.name || 'Untitled Play'}
+                    </div>
+                    <!-- Removed formation/custom text as requested -->
                 </div>
             `;
-            card.onclick = () => this.app.openPlay(play.id);
-            this.playsGridEl.appendChild(card);
-        });
+
+                // Inject SVG
+                const previewContainer = card.querySelector('.play-card-preview');
+                const svgToCheck = this.createPlayPreviewSVG(play);
+                previewContainer.appendChild(svgToCheck);
+
+                // Click to Open
+                card.onclick = (e) => {
+                    // Prevent open if dragging was the main action (simple check)
+                    this.app.openPlay(play.id);
+                };
+
+                // ---- Drag and Drop Events ----
+                card.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    // Store ID to identify dragged item
+                    e.dataTransfer.setData('text/plain', play.id);
+                    card.classList.add('dragging');
+                });
+
+                card.addEventListener('dragend', (e) => {
+                    card.classList.remove('dragging');
+                    // Clean up any drag-over styles
+                    this.playsGridEl.querySelectorAll('.play-card').forEach(c => c.classList.remove('drag-over'));
+                });
+
+                // Add drop target events to the card itself if sorting *between* items
+                card.addEventListener('dragenter', (e) => {
+                    e.preventDefault();
+                    if (card !== document.querySelector('.dragging')) {
+                        card.classList.add('drag-over');
+                    }
+                });
+
+                card.addEventListener('dragleave', (e) => {
+                    card.classList.remove('drag-over');
+                });
+
+                card.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // Necessary to allow dropping
+                    e.dataTransfer.dropEffect = 'move';
+                });
+
+                card.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    card.classList.remove('drag-over');
+
+                    const draggedId = e.dataTransfer.getData('text/plain');
+                    const targetId = play.id;
+
+                    if (draggedId === targetId) return;
+
+                    // Reorder logic:
+                    // We need to move the dragged item to be *before* the target item in the list
+                    // Find indices in the current stored plays array
+                    const currentPlays = this.app.currentPlaybook.plays;
+                    const draggedIndex = currentPlays.findIndex(p => p.id === draggedId);
+                    const targetIndex = currentPlays.findIndex(p => p.id === targetId);
+
+                    if (draggedIndex < 0 || targetIndex < 0) return;
+
+                    // Remove dragged item
+                    const [draggedItem] = currentPlays.splice(draggedIndex, 1);
+                    // Insert at new position
+                    currentPlays.splice(targetIndex, 0, draggedItem);
+
+                    // Re-render UI immediately to show new order
+                    this.renderPlaybookOverview(this.app.currentPlaybook);
+
+                    // Save new order to DB
+                    const orderedIds = currentPlays.map(p => p.id);
+                    try {
+                        await this.store.savePlayOrder(this.app.currentPlaybook.id, orderedIds);
+                    } catch (err) {
+                        console.error('Failed to save order:', err);
+                        // Optional: Revert UI or alert user
+                    }
+                });
+
+                this.playsGridEl.appendChild(card);
+            });
+        }
     }
 
     refreshPlayList(playbook) {
@@ -177,5 +316,328 @@ export class UI {
         if (avatarEl) avatarEl.textContent = initials;
         if (nameEl) nameEl.textContent = name;
         if (emailEl) emailEl.textContent = email;
+    }
+
+    // --- Playbook Settings Modal Methods ---
+
+    async openPlaybookSettings() {
+        if (!this.app.currentPlaybook) return;
+
+        const playbook = this.app.currentPlaybook;
+        this.settingsPlaybookNameInput.value = playbook.name;
+
+        // Check for Admin Rights
+        const user = await this.store.getCurrentUser();
+        const adminContainer = document.getElementById('admin-options-container');
+        const publicCheckbox = document.getElementById('settings-is-public');
+
+        if (user && user.email === 'chris.rothstein@gmail.com') {
+            adminContainer.style.display = 'block';
+            publicCheckbox.checked = playbook.isPublic || false;
+        } else {
+            adminContainer.style.display = 'none';
+        }
+
+        // Show modal
+        this.settingsModal.classList.remove('hidden');
+
+        // Render formation preview
+        // Assuming we rely on the logic that "default formation" is just the first one of the team size
+        // or if we have a saved default property. The task says "Default Formation: [Name]"
+        // For now, let's assume standard default is index 0 of the size.
+        // If we store default formation index, use it. usage: playbook.defaultFormationIndex (mock property)
+
+        // Check if teamSize is "5" or "5v5" and format accordingly
+        const rawSize = playbook.teamSize || '5';
+        const teamSizeKey = rawSize.includes('v') ? rawSize : `${rawSize}v${rawSize}`;
+        const formations = getFormations(teamSizeKey);
+        // Default to first one if not specified
+        const formationIndex = playbook.defaultFormationIndex || 0;
+
+        let formation;
+        if (playbook.defaultFormation && playbook.defaultFormation.length > 0) {
+            // Use saved custom formation
+            formation = {
+                name: 'Custom Default',
+                players: playbook.defaultFormation
+            };
+        } else {
+            // Fallback to static template
+            formation = formations[formationIndex] || formations[0];
+        }
+
+        if (formation) {
+            this.settingsDefaultFormationTitle.textContent = `Default Formation`;
+            this.renderSettingsFormationPreview(formation);
+            // Click to edit
+            const previewEl = this.settingsFormationPreview.querySelector('.preview-field-green');
+            if (previewEl) {
+                previewEl.onclick = () => {
+                    // Redirect to "Edit Formation" -> likely creating a new play with this formation
+                    // or the formation editor if that's a distinct view.
+                    // Task says: "If clicked that it would go to the formation editor that already exists."
+                    // So we simulate clicking "nav-edit-formation" or call usage:
+                    this.closePlaybookSettings();
+                    this.app.handleEditDefaultFormation(); // Need to ensure this exists or simulate button click
+                };
+            }
+        }
+    }
+
+    closePlaybookSettings() {
+        this.settingsModal.classList.add('hidden');
+    }
+
+    async savePlaybookSettings() {
+        if (!this.app.currentPlaybook) return;
+
+        const newName = this.settingsPlaybookNameInput.value.trim();
+        if (!newName) {
+            alert('Please enter a playbook name');
+            return;
+        }
+
+        const playbook = this.app.currentPlaybook;
+        playbook.name = newName;
+
+        // Save Admin Options
+        const user = await this.store.getCurrentUser();
+        if (user && user.email === 'chris.rothstein@gmail.com') {
+            const publicCheckbox = document.getElementById('settings-is-public');
+            playbook.isPublic = publicCheckbox.checked;
+        }
+
+        try {
+            // Optimistic update
+            this.currentPlaybookNameEl.textContent = newName;
+            this.headerPlaybookName.textContent = newName;
+
+            await this.store.savePlaybook(playbook);
+            this.closePlaybookSettings();
+            // Refresh dropdown list
+            this.renderPlaybookDropdownItems();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to save settings');
+        }
+    }
+
+    async deletePlaybookHandler() {
+        if (!this.app.currentPlaybook) return;
+
+        if (confirm(`Are you sure you want to delete "${this.app.currentPlaybook.name}"? This action cannot be undone.`)) {
+            try {
+                const id = this.app.currentPlaybook.id;
+                await this.store.deletePlaybook(id);
+
+                // Switch to another playbook or clear state
+                // Ideally app.js handles this "post-delete" flow
+                this.closePlaybookSettings();
+                location.reload(); // Simplest way to reset state for now
+            } catch (err) {
+                console.error(err);
+                alert('Failed to delete playbook');
+            }
+        }
+    }
+
+    // --- Rendering Helpers ---
+
+    drawFieldOnSVG(svg) {
+        const svgNS = "http://www.w3.org/2000/svg";
+
+        // Background
+        const rect = document.createElementNS(svgNS, "rect");
+        rect.setAttribute("width", "800");
+        rect.setAttribute("height", "600");
+        rect.setAttribute("fill", "#ffffff");
+        svg.appendChild(rect);
+
+        // Lines helper
+        const createLine = (y, color, width) => {
+            const line = document.createElementNS(svgNS, "line");
+            line.setAttribute("x1", "0");
+            line.setAttribute("y1", y);
+            line.setAttribute("x2", "800");
+            line.setAttribute("y2", y);
+            line.setAttribute("stroke", color);
+            line.setAttribute("stroke-width", width);
+            svg.appendChild(line);
+        };
+
+        // Lines: 150 (Light), 300 (Dark/LOS), 450 (Light)
+        createLine(150, '#e5e7eb', 2);
+        createLine(300, '#9ca3af', 4);
+        createLine(450, '#e5e7eb', 2);
+    }
+
+    createPlayPreviewSVG(play) {
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("viewBox", "0 0 800 600");
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("height", "100%");
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+        this.drawFieldOnSVG(svg);
+
+        // Render Routes
+        if (play.routes) { // routes array or reconstructed logic needed?
+            // Existing structure: play.routes is likely just array of point-arrays or linked to players?
+            // In App.saveCurrentPlay, we store players (with routes embedded? or separate?)
+            // Editor.getData returns { players, routes: [] } but players have `route` property (array of points).
+
+            // Let's iterate players to find routes
+            const players = play.players || [];
+            players.forEach(p => {
+                if (p.route && p.route.length > 0) {
+                    const polyline = document.createElementNS(svgNS, "polyline");
+                    // Construct points string
+                    let pointsStr = `${p.x},${p.y}`; // Start at player
+                    p.route.forEach(pt => pointsStr += ` ${pt.x},${pt.y}`);
+
+                    polyline.setAttribute("points", pointsStr);
+                    polyline.setAttribute("fill", "none");
+                    polyline.setAttribute("stroke", p.color || '#1f2937');
+                    polyline.setAttribute("stroke-width", "3"); // Match build script for consistent arrow size
+
+                    // Markers: Try using global defs
+                    const colorHex = (p.color || '#1f2937').replace('#', '');
+                    polyline.setAttribute("marker-end", `url(#arrowhead-${colorHex})`);
+
+                    svg.appendChild(polyline);
+                }
+            });
+        }
+
+        // Render Players
+        if (play.players) {
+            play.players.forEach(p => {
+                const circle = document.createElementNS(svgNS, "circle");
+                circle.setAttribute("cx", p.x);
+                circle.setAttribute("cy", p.y);
+                circle.setAttribute("r", "20");
+                circle.setAttribute("fill", p.color || '#3b82f6');
+                circle.setAttribute("stroke", "white");
+                circle.setAttribute("stroke-width", "2");
+                svg.appendChild(circle);
+
+                // Simplified Label (maybe too small for card preview? Keep standard size 14)
+                const text = document.createElementNS(svgNS, "text");
+                text.setAttribute("x", p.x);
+                text.setAttribute("y", p.y);
+                text.setAttribute("dy", "0.35em");
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("fill", "white");
+                text.setAttribute("font-size", "14px");
+                text.setAttribute("font-family", "Inter, sans-serif");
+                text.setAttribute("font-weight", "600");
+                text.textContent = p.label || '';
+                svg.appendChild(text);
+            });
+        }
+
+        return svg;
+    }
+
+    renderSettingsFormationPreview(formation) {
+        const container = this.settingsFormationPreview.querySelector('.preview-field-green');
+        if (!container) return;
+
+        // Use SVG for precise aspect ratio scaling
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("viewBox", "0 0 800 600");
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("height", "100%");
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet"); // Scale down to fit, maintain ratio
+        svg.style.cursor = 'pointer';
+
+        // Draw Field
+        this.drawFieldOnSVG(svg);
+
+        // Draw Players
+        formation.players.forEach(p => {
+            // Circle
+            const circle = document.createElementNS(svgNS, "circle");
+            circle.setAttribute("cx", p.x);
+            circle.setAttribute("cy", p.y);
+            circle.setAttribute("r", "20");
+
+            circle.setAttribute("fill", p.color || '#3b82f6'); // Use p.color directly or default
+            circle.setAttribute("stroke", "white");
+            circle.setAttribute("stroke-width", "2");
+
+            // Text Label
+            const text = document.createElementNS(svgNS, "text");
+            text.setAttribute("x", p.x);
+            text.setAttribute("y", p.y);
+            text.setAttribute("dy", "0.35em");
+            text.setAttribute("text-anchor", "middle");
+            text.setAttribute("fill", "white");
+            text.setAttribute("font-size", "14px");
+            text.setAttribute("font-family", "Inter, sans-serif");
+            text.setAttribute("font-weight", "600");
+            text.textContent = p.label || '';
+
+            svg.appendChild(circle);
+            svg.appendChild(text);
+        });
+
+        // Re-inject edit overlay
+        container.innerHTML = '';
+        container.appendChild(svg);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'edit-overlay';
+        overlay.innerHTML = `
+            <span class="edit-icon">✎</span>
+            <span>Edit Formation</span>
+        `;
+        container.appendChild(overlay);
+    }
+    showSnackbar(message, duration = 3000) {
+        const snackbar = document.getElementById('snackbar');
+        if (!snackbar) return;
+
+        snackbar.textContent = message;
+        snackbar.classList.remove('hidden');
+        snackbar.classList.add('show');
+
+        setTimeout(() => {
+            snackbar.classList.remove('show');
+            snackbar.classList.add('hidden');
+        }, duration);
+    }
+    savePlaySettings() {
+        if (!this.app.currentPlay) return;
+
+        const name = this.playSettingsNameInput.value.trim() || 'Untitled Play';
+        const desc = this.playSettingsDescInput.value.trim();
+
+        this.app.currentPlay.name = name;
+        this.app.currentPlay.description = desc;
+
+        // Update editor header input to match
+        if (this.editorPlayNameInput) {
+            this.editorPlayNameInput.value = name;
+        }
+
+        this.app.saveCurrentPlay();
+        this.hideModal(this.playSettingsModal);
+        this.showSnackbar("Play details saved");
+    }
+
+    showModal(modal) {
+        if (modal) {
+            modal.classList.remove('hidden');
+            // Auto focus first input if available
+            const input = modal.querySelector('input, textarea');
+            if (input) input.focus();
+        }
+    }
+
+    hideModal(modal) {
+        if (modal) modal.classList.add('hidden');
     }
 }
