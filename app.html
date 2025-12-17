@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PlayMaker - Flag Football Designer</title>
-    <link rel="stylesheet" href="css/style_v17.css?v=20">
+    <link rel="stylesheet" href="css/style_v17.css?v=23">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -614,14 +614,98 @@
             </div>
         </div>
     </div>
+
+    <!-- VIEW: Print Settings Modal -->
+    <div id="view-print-settings" class="dark-overlay hidden">
+        <div class="modal-container settings-modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>Print Playbook</h2>
+                <button id="close-print-modal" class="btn-icon-light">✕</button>
+            </div>
+
+            <!-- Print Tabs -->
+            <div class="print-tabs" style="display: flex; border-bottom: 1px solid #e2e8f0; margin-bottom: 20px;">
+                <button class="print-tab active" data-tab="wristband"
+                    style="flex: 1; padding: 12px; background: none; border: none; color: var(--text-main); border-bottom: 2px solid #3b82f6; cursor: pointer; font-weight: 600;">Wristbands</button>
+                <button class="print-tab" data-tab="playbook"
+                    style="flex: 1; padding: 12px; background: none; border: none; color: var(--text-muted); border-bottom: 2px solid transparent; cursor: pointer; font-weight: 600;">Playbook</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="print-info-summary"
+                    style="margin-bottom: 20px; color: var(--text-muted); font-size: 0.9rem;">
+                    Printing <span id="print-play-count-display">0</span> plays from current playbook.
+                </div>
+
+                <!-- WRISTBAND OPTIONS -->
+                <div id="print-options-wristband" class="print-options-section">
+                    <div class="modal-section">
+                        <label
+                            style="display: block; color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">Layout</label>
+                        <div class="segmented-control" style="width: 100%;">
+                            <button class="segment-btn active" data-plays="8">8 Plays</button>
+                            <button class="segment-btn" data-plays="6">6 Plays</button>
+                            <button class="segment-btn" data-plays="4">4 Plays</button>
+                        </div>
+                    </div>
+
+                    <div class="modal-section">
+                        <label
+                            style="display: block; color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">Width</label>
+                        <div class="wristband-width-selector segmented-control" style="width: 100%;">
+                            <button class="segment-btn active" data-width="3">3"</button>
+                            <button class="segment-btn" data-width="4.25">4.25"</button>
+                        </div>
+                    </div>
+
+                    <div class="modal-section">
+                        <label
+                            style="display: block; color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">Height</label>
+                        <div class="wristband-height-selector segmented-control" style="width: 100%;">
+                            <button class="segment-btn active" data-height="2.25">2.25"</button>
+                            <button class="segment-btn" data-height="3.5">3.5"</button>
+                        </div>
+                    </div>
+
+                    <div class="modal-section">
+                        <label style="display: block; color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">Copies
+                            per play</label>
+                        <input type="number" id="print-wb-copies" class="light-input-bg" value="1" min="1" max="10">
+                    </div>
+                </div>
+
+                <!-- PLAYBOOK OPTIONS -->
+                <div id="print-options-playbook" class="print-options-section hidden">
+                    <div class="modal-section">
+                        <label style="display: block; color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">Plays per
+                            Page</label>
+                        <div class="segmented-control" style="width: 100%;">
+                            <button class="segment-btn" data-plays="24">24</button>
+                            <button class="segment-btn active" data-plays="12">12</button>
+                            <button class="segment-btn" data-plays="8">8</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline-prof" id="cancel-print-btn">Cancel</button>
+                <button class="btn-primary-prof" id="confirm-print-btn">Print</button>
+            </div>
+        </div>
     </div>
+    </div>
+
+    <!-- Hidden Print Container -->
+    <div id="print-container"></div>
 
     <!-- Snackbar for notifications -->
     <div id="snackbar" class="snackbar hidden">Click edit to start making edits</div>
     <script type="module" src="js/formations.js?v=15"></script>
     <script type="module" src="js/store.js?v=15"></script>
     <script type="module" src="js/editor.js?v=15"></script>
-    <script type="module" src="js/ui.js?v=15"></script>
+    <script type="module" src="js/ui.js?v=20"></script>
+    <script type="module" src="js/print.js?v=7"></script> <!-- Fixed header colors with !important -->
     <script type="module" src="js/app.js?v=15"></script>
 </body>
 

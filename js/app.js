@@ -433,15 +433,7 @@ class App {
             });
         }
 
-        // Print Button (Move to Overview)
-        const printBtn = document.getElementById('print-playbook-btn');
-        if (printBtn) {
-            printBtn.addEventListener('click', () => {
-                window.print();
-            });
-        }
-
-        // Removed old 'print-play' editor button listener logic
+        // Print button handler is in ui.js - removed duplicate here
 
         // Window Unload Protection
         window.onbeforeunload = (e) => {

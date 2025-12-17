@@ -1,4 +1,5 @@
 import { getFormations } from './formations.js';
+import { PrintModule } from './print.js';
 
 export class UI {
     constructor(store, app) {
@@ -24,6 +25,13 @@ export class UI {
         this.playSettingsNameInput = document.getElementById('setting-play-name');
         this.playSettingsDescInput = document.getElementById('setting-play-desc');
         this.editorPlayNameInput = document.getElementById('play-name');
+
+        // Print Module
+        this.printModule = new PrintModule(store, this);
+        this.printModal = document.getElementById('view-print-settings');
+        this.printTabs = document.querySelectorAll('.print-tab');
+        this.printOptionsSections = document.querySelectorAll('.print-options-section');
+        this.printPlayCountDisplay = document.getElementById('print-play-count-display');
 
         // Header elements
         this.headerPlaybookName = document.getElementById('header-playbook-name');
@@ -209,6 +217,58 @@ export class UI {
         if (btnClosePlaySettings) {
             btnClosePlaySettings.onclick = () => this.hideModal(this.playSettingsModal);
         }
+
+        // Print Modal Events
+        const printBtn = document.getElementById('print-playbook-btn');
+        if (printBtn) {
+            printBtn.onclick = () => this.openPrintModal();
+        }
+
+        const closePrintBtn = document.getElementById('close-print-modal');
+        if (closePrintBtn) closePrintBtn.onclick = () => this.hideModal(this.printModal);
+
+        const cancelPrintBtn = document.getElementById('cancel-print-btn');
+        if (cancelPrintBtn) cancelPrintBtn.onclick = () => this.hideModal(this.printModal);
+
+        const confirmPrintBtn = document.getElementById('confirm-print-btn');
+        if (confirmPrintBtn) confirmPrintBtn.onclick = () => this.handlePrintConfirm();
+
+        // Print Tabs
+        this.printTabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const target = e.target.dataset.tab;
+
+                // Active Tab - use dark colors for light modal background
+                this.printTabs.forEach(t => {
+                    t.classList.remove('active');
+                    t.style.borderBottomColor = 'transparent';
+                    t.style.color = 'var(--text-muted)'; // Gray text for inactive
+                });
+                e.target.classList.add('active');
+                e.target.style.borderBottomColor = '#3b82f6';
+                e.target.style.color = 'var(--text-main)'; // Dark text for active
+
+                // Show Section
+                this.printOptionsSections.forEach(sec => sec.classList.add('hidden'));
+                document.getElementById(`print-options-${target}`).classList.remove('hidden');
+            });
+        });
+
+
+        // Print Option Buttons (Segmented Controls inside print modal)
+        const printSegBtns = document.querySelectorAll('.print-options-section .segment-btn');
+        printSegBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const parent = btn.closest('.segmented-control') ||
+                    btn.closest('.grid-size-selector') ||
+                    btn.closest('.wristband-width-selector') ||
+                    btn.closest('.wristband-height-selector');
+                if (parent) {
+                    parent.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                }
+            });
+        });
     }
 
     async renderCreatePlaybookView() {
@@ -585,10 +645,62 @@ export class UI {
     createPlayPreviewSVG(play) {
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("viewBox", "0 0 1000 700");
+        // Use a moderate crop to reduce whitespace but not cut off content
+        // Keep some margins: 50px on sides, 25px top/bottom
+        svg.setAttribute("viewBox", "50 25 900 650");
         svg.setAttribute("width", "100%");
         svg.setAttribute("height", "100%");
         svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+        // Create unique ID suffix for this SVG to avoid conflicts
+        const uniqueId = `svg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Add marker definitions for print compatibility
+        const defs = document.createElementNS(svgNS, "defs");
+
+        // Define all marker colors we might need
+        const colors = ['6366f1', 'ef4444', '22c55e', 'eab308', 'ec4899', '06b6d4', '1f2937',
+            'f97316', '3b82f6', 'a855f7', '64748b', '000000'];
+
+        colors.forEach(color => {
+            // Arrow marker
+            const arrowMarker = document.createElementNS(svgNS, "marker");
+            arrowMarker.setAttribute("id", `arrowhead-${color}-${uniqueId}`);
+            arrowMarker.setAttribute("markerWidth", "10");
+            arrowMarker.setAttribute("markerHeight", "10");
+            arrowMarker.setAttribute("refX", "5");
+            arrowMarker.setAttribute("refY", "5");
+            arrowMarker.setAttribute("orient", "auto");
+            arrowMarker.setAttribute("markerUnits", "strokeWidth");
+
+            const arrowPolygon = document.createElementNS(svgNS, "polygon");
+            arrowPolygon.setAttribute("points", "0 0, 10 5, 0 10");
+            arrowPolygon.setAttribute("fill", `#${color}`);
+            arrowMarker.appendChild(arrowPolygon);
+            defs.appendChild(arrowMarker);
+
+            // Circle marker
+            const circleMarker = document.createElementNS(svgNS, "marker");
+            circleMarker.setAttribute("id", `circlehead-${color}-${uniqueId}`);
+            circleMarker.setAttribute("markerWidth", "10");
+            circleMarker.setAttribute("markerHeight", "10");
+            circleMarker.setAttribute("refX", "5");
+            circleMarker.setAttribute("refY", "5");
+            circleMarker.setAttribute("orient", "auto");
+            circleMarker.setAttribute("markerUnits", "strokeWidth");
+
+            const circle = document.createElementNS(svgNS, "circle");
+            circle.setAttribute("cx", "5");
+            circle.setAttribute("cy", "5");
+            circle.setAttribute("r", "4");
+            circle.setAttribute("fill", "#ffffff");
+            circle.setAttribute("stroke", `#${color}`);
+            circle.setAttribute("stroke-width", "2");
+            circleMarker.appendChild(circle);
+            defs.appendChild(circleMarker);
+        });
+
+        svg.appendChild(defs);
 
         this.drawFieldOnSVG(svg);
 
@@ -612,14 +724,14 @@ export class UI {
                     polyline.setAttribute("stroke", p.color || '#1f2937');
                     polyline.setAttribute("stroke-width", "3"); // Match build script for consistent arrow size
 
-                    // Markers: Try using global defs
+                    // Markers: Use unique IDs for this SVG
                     const colorHex = (p.color || '#1f2937').replace('#', '');
                     const endType = p.routeEndType || 'arrow';
 
                     if (endType === 'circle') {
-                        polyline.setAttribute("marker-end", `url(#circlehead-${colorHex})`);
+                        polyline.setAttribute("marker-end", `url(#circlehead-${colorHex}-${uniqueId})`);
                     } else {
-                        polyline.setAttribute("marker-end", `url(#arrowhead-${colorHex})`);
+                        polyline.setAttribute("marker-end", `url(#arrowhead-${colorHex}-${uniqueId})`);
                     }
 
                     svg.appendChild(polyline);
@@ -1108,4 +1220,62 @@ export class UI {
     }
 
 
+    // --- Print Modal Methods ---
+
+    openPrintModal() {
+        if (!this.app.currentPlaybook) return;
+
+        // Update Summary
+        const plays = this.app.currentPlaybook.plays || [];
+        if (this.printPlayCountDisplay) {
+            this.printPlayCountDisplay.textContent = plays.length;
+        }
+
+        // Show Modal
+        if (this.printModal) {
+            this.printModal.classList.remove('hidden');
+        }
+    }
+
+
+    handlePrintConfirm() {
+        // Collect Options
+        const activeTab = document.querySelector('.print-tab.active').dataset.tab;
+
+        let options = {
+            type: activeTab
+        };
+
+        if (activeTab === 'wristband') {
+            const section = document.getElementById('print-options-wristband');
+            // Plays count
+            const playsBtn = section.querySelector('.segmented-control button.active');
+            options.playsPerPage = playsBtn ? playsBtn.dataset.plays : 8;
+
+            // Width and Height (separate selectors)
+            const widthBtn = section.querySelector('.wristband-width-selector button.active');
+            const heightBtn = section.querySelector('.wristband-height-selector button.active');
+            options.width = widthBtn ? parseFloat(widthBtn.dataset.width) : 3;
+            options.height = heightBtn ? parseFloat(heightBtn.dataset.height) : 2.25;
+
+            // Copies
+            const copiesInput = document.getElementById('print-wb-copies');
+            options.copies = copiesInput ? copiesInput.value : 1;
+
+        } else {
+            const section = document.getElementById('print-options-playbook');
+            // Plays count
+            const playsBtn = section.querySelector('.segmented-control button.active');
+            options.playsPerPage = playsBtn ? playsBtn.dataset.plays : 12;
+            options.copies = 1;
+        }
+
+        // Close Modal
+        this.hideModal(this.printModal);
+
+        // Execute Print
+        if (this.printModule) {
+            this.printModule.generatePrintLayout(this.app.currentPlaybook, options);
+        }
+    }
 }
