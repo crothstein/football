@@ -101,6 +101,16 @@ export class UI {
             });
         }
 
+        // Make Primary Button
+        const makePrimaryBtn = document.getElementById('make-primary-btn');
+        if (makePrimaryBtn) {
+            makePrimaryBtn.addEventListener('click', () => {
+                if (this.app.editor && this.app.editor.selectedPlayer) {
+                    this.app.editor.setPrimaryPlayer(this.app.editor.selectedPlayer.id);
+                }
+            });
+        }
+
         // Close Sidebar Button
         const closeSidebarBtn = document.getElementById('close-sidebar');
         if (closeSidebarBtn) {
@@ -732,7 +742,9 @@ export class UI {
     updateSidebar(player) {
         if (!this.sidebar) return;
 
-        this.sidebar.classList.remove('hidden');
+        if (this.sidebar) {
+            this.sidebar.classList.remove('hidden');
+        }
 
         // Show Content, Hide Empty
         const emptyState = document.getElementById('sidebar-empty-state');
@@ -756,8 +768,15 @@ export class UI {
         if (primaryBtn) {
             if (player.isPrimary) {
                 primaryBtn.classList.add('active');
+                // Force styles to ensure visibility
+                primaryBtn.style.color = '#EAB308';
+                primaryBtn.style.borderColor = '#EAB308';
+                primaryBtn.style.backgroundColor = '#FEF9C3';
             } else {
                 primaryBtn.classList.remove('active');
+                primaryBtn.style.color = '';
+                primaryBtn.style.borderColor = '';
+                primaryBtn.style.backgroundColor = '';
             }
         }
 
@@ -818,14 +837,10 @@ export class UI {
                 const createBtn = (style, label, iconClass) => {
                     const btn = document.createElement('button');
                     btn.className = `segment-btn ${currentStyle === style ? 'active' : ''}`;
+
                     if (iconClass) {
-                        btn.innerHTML = `<span class="${iconClass}"></span> ${label}`;
-                    } else {
-                        // Fallback or icon
-                        btn.textContent = label;
-                    }
-                    if (style === 'squiggly') {
-                        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 20 10" stroke="currentColor" fill="none" class="squiggly-icon"><path d="M0 10 Q2.5 0 5 10 T10 10 T15 10 T20 10" /></svg> Wave`;
+                        btn.innerHTML = `<div class="${iconClass}"></div>`;
+                    } else if (style === 'squiggly') {
                         // Quick custom SVG for wave
                         btn.innerHTML = `
                             <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="2">
@@ -844,11 +859,13 @@ export class UI {
                     return btn;
                 };
 
-                const btnSolid = createBtn('solid', 'Solid', 'line-solid');
-                const btnDashed = createBtn('dashed', 'Dashed', 'line-dashed');
+                const btnSolid = createBtn('solid', '', 'line-solid');
+                const btnDashed = createBtn('dashed', '', 'line-dashed');
+                const btnSquiggly = createBtn('squiggly', '', null);
 
                 control.appendChild(btnSolid);
                 control.appendChild(btnDashed);
+                control.appendChild(btnSquiggly);
 
                 row.appendChild(control);
                 container.appendChild(row);
@@ -857,9 +874,30 @@ export class UI {
     }
 
     hideSidebar() {
+        // When hiding sidebar (deselecting), we revert to empty state
+        // but keep the sidebar itself visible if in edit mode (handled by CSS)
+
         if (this.sidebar) {
             this.sidebar.classList.add('hidden');
         }
+
+        const emptyState = document.getElementById('sidebar-empty-state');
+        const content = document.getElementById('sidebar-content');
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (content) content.classList.add('hidden');
+    }
+
+    showEditor() {
+        // Called when entering editor
+        if (this.sidebar) {
+            this.sidebar.classList.remove('hidden');
+        }
+
+        // Reset to empty state
+        const emptyState = document.getElementById('sidebar-empty-state');
+        const content = document.getElementById('sidebar-content');
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (content) content.classList.add('hidden');
     }
 
     savePlaySettings() {

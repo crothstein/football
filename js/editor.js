@@ -139,61 +139,75 @@ export class Editor {
         // Collect players from DOM to ensure positions are current
         const players = [];
         Array.from(this.playersLayer.children).forEach(g => {
-            const circle = g.querySelector('circle');
+            // FIX: Ignore invisible hit-area when reading visual properties
+            const circle = g.querySelector('circle:not(.hit-area)');
             const polygon = g.querySelector('polygon');
             const text = g.querySelector('text');
             const id = g.dataset.id;
             const routeId = g.dataset.routeId;
 
-            // Get Coords
-            let x, y, color;
-            if (circle) {
-                x = parseFloat(circle.getAttribute('cx'));
-                y = parseFloat(circle.getAttribute('cy'));
-                color = circle.getAttribute('fill');
-            } else {
-                // Star/Polygon: Use Text pos as center equivalent
-                x = parseFloat(text.getAttribute('x'));
-                y = parseFloat(text.getAttribute('y'));
-                color = polygon.getAttribute('fill');
-            }
+            // ROBUST: Read from dataset first, fall back to attributes only if needed
+            let x = parseFloat(g.dataset.x);
+            let y = parseFloat(g.dataset.y);
+            let color = g.dataset.color;
+            let label = g.dataset.label;
+            let isPrimary = g.dataset.isPrimary === 'true';
 
-            // Reconstruct route data
-            // Note: getRoutePoints logic needs update or verify it works with group? 
-            // It relied on polyline attribute.
+            // Fallback (Legacy/First Load)
+            if (isNaN(x)) x = (circle ? parseFloat(circle.getAttribute('cx')) : (text ? parseFloat(text.getAttribute('x')) : 0)) || 0;
+            if (isNaN(y)) y = (circle ? parseFloat(circle.getAttribute('cy')) : (text ? parseFloat(text.getAttribute('y')) : 0)) || 0;
+            if (!color) color = (circle ? circle.getAttribute('fill') : (polygon ? polygon.getAttribute('fill') : null)) || '#1f2937';
+            if (label === undefined) label = text ? text.textContent : '';
+            // If dataset.isPrimary is missing, check DOM structure
+            if (g.dataset.isPrimary === undefined) isPrimary = g.querySelector('polygon') !== null;
+            // Verify/Restore Route Parsing
             const routeGroup = document.getElementById(routeId);
             let routePoints = [];
             let routeStyles = [];
             let routeEndType = 'arrow';
 
             if (routeGroup) {
+                routeEndType = routeGroup.dataset.endType || 'arrow';
+                // Legacy polyline check
                 if (routeGroup.tagName.toLowerCase() === 'polyline') {
-                    // Fallback for legacy if not yet converted (unlikely with loadData)
-                    // ... (Skip complex fallback, assume render converted it)
+                    // Skip legacy
                 } else {
-                    // It's a Group of lines
-                    routeEndType = routeGroup.dataset.endType || 'arrow';
-                    const lines = Array.from(routeGroup.querySelectorAll('line'));
-                    lines.forEach(line => {
-                        const x = parseFloat(line.getAttribute('x2'));
-                        const y = parseFloat(line.getAttribute('y2'));
-                        routePoints.push({ x, y });
-                        routeStyles.push(line.dataset.style || 'solid');
+                    // It's a Group of lines or paths
+                    const children = Array.from(routeGroup.children);
+                    children.forEach(el => {
+                        let rx, ry, style;
+                        if (el.tagName === 'line') {
+                            rx = parseFloat(el.getAttribute('x2'));
+                            ry = parseFloat(el.getAttribute('y2'));
+                            style = el.dataset.style || 'solid';
+                        } else if (el.tagName === 'path') {
+                            const d = el.getAttribute('d');
+                            if (d) {
+                                const parts = d.split(' ');
+                                rx = parseFloat(parts[parts.length - 2]);
+                                ry = parseFloat(parts[parts.length - 1]);
+                                style = el.dataset.style || 'control';
+                            }
+                        }
+
+                        if (!isNaN(rx) && !isNaN(ry)) {
+                            routePoints.push({ x: rx, y: ry });
+                            routeStyles.push(style);
+                        }
                     });
                 }
             }
-
             players.push({
                 id: id,
                 type: 'offense',
-                x: parseFloat(circle.getAttribute('cx')),
-                y: parseFloat(circle.getAttribute('cy')),
-                color: circle.getAttribute('fill'),
-                label: text ? text.textContent : '',
+                x: x,
+                y: y,
+                color: color,
+                label: label,
                 route: routePoints,
-                routeStyles: routeStyles, // Save array
+                routeStyles: routeStyles,
                 routeEndType: routeEndType,
-                isPrimary: g.querySelector('polygon') !== null // Check if star
+                isPrimary: isPrimary
             });
         });
 
@@ -238,9 +252,19 @@ export class Editor {
             setTimeout(() => { this.shouldSuppressClick = false; }, 300);
 
             const pt = this.getPointFromEvent(e);
-            const circle = playerGroup.querySelector('circle');
-            const cx = parseFloat(circle.getAttribute('cx'));
-            const cy = parseFloat(circle.getAttribute('cy'));
+            // FIX: Ignore invisible hit-area circles
+            const circle = playerGroup.querySelector('circle:not(.hit-area)');
+
+            let cx, cy;
+            if (circle) {
+                cx = parseFloat(circle.getAttribute('cx'));
+                cy = parseFloat(circle.getAttribute('cy'));
+            } else {
+                // Fallback for Star (Polygon) using Text centered position
+                const txt = playerGroup.querySelector('text');
+                cx = parseFloat(txt.getAttribute('x'));
+                cy = parseFloat(txt.getAttribute('y'));
+            }
 
             this.dragOffset = { x: pt.x - cx, y: pt.y - cy };
 
@@ -248,8 +272,9 @@ export class Editor {
             const playerId = playerGroup.dataset.id;
 
             const text = playerGroup.querySelector('text');
-            // circle already defined above
+            // circle already defined above as visual-only
             const polygon = playerGroup.querySelector('polygon');
+            // FIX: Ensure we don't read transparent fill
             const color = (circle || polygon).getAttribute('fill');
 
             // Reconstruct Route State
@@ -276,13 +301,14 @@ export class Editor {
                 id: playerId,
                 element: playerGroup,
                 routeId: routeId,
-                color: circle.getAttribute('fill'),
+                color: (circle || polygon) ? (circle || polygon).getAttribute('fill') : '#1f2937',
                 label: text ? text.textContent : '',
                 x: cx, // Store current x
                 y: cy, // Store current y
                 route: routePoints,
                 routeStyles: routeStyles,
-                routeEndType: routeEndType
+                routeEndType: routeEndType,
+                isPrimary: !!polygon // Pass primary status derived from DOM
             };
             this.selectPlayer(player);
 
@@ -298,20 +324,19 @@ export class Editor {
         const newY = pt.y - this.dragOffset.y;
 
         // Calculate Delta
-        // Calculate Delta
-        const circle = this.draggedElement.querySelector('circle');
+        // FIX: Discriminate between Visual Circle and Hit Shield
+        const visualCircle = this.draggedElement.querySelector('circle:not(.hit-area)');
+        const hitCircle = this.draggedElement.querySelector('.hit-area');
         const polygon = this.draggedElement.querySelector('polygon'); // Star
+
         let oldX, oldY;
 
-        if (circle) {
-            oldX = parseFloat(circle.getAttribute('cx'));
-            oldY = parseFloat(circle.getAttribute('cy'));
-        } else if (polygon) {
-            // Re-calc from Star? Bounding box or stored logic?
-            // Better: we stored current X/Y in this.selectedPlayer / this.draggedElement logic 
-            // But here we read from DOM.
-            // Center of star is rough.
-            // We can infer translation from text position?
+        if (visualCircle) {
+            oldX = parseFloat(visualCircle.getAttribute('cx'));
+            oldY = parseFloat(visualCircle.getAttribute('cy'));
+        } else {
+            // Star Case (Polygon + Maybe Shield)
+            // Use Text or Shield for consistent center
             const text = this.draggedElement.querySelector('text');
             oldX = parseFloat(text.getAttribute('x'));
             oldY = parseFloat(text.getAttribute('y'));
@@ -321,16 +346,21 @@ export class Editor {
         const dy = newY - oldY;
 
         // Update Shape
-        if (circle) {
-            circle.setAttribute('cx', newX);
-            circle.setAttribute('cy', newY);
-        } else if (polygon) {
-            // Re-calc points for star at new location
-            // Assume we have access to helper? Or logic
-            // Ideally we move Group with transform translate? NO we are moving attributes.
-            // Need to call calculateStarPoints again
+        if (visualCircle) {
+            visualCircle.setAttribute('cx', newX);
+            visualCircle.setAttribute('cy', newY);
+        }
+
+        // Always update Star Polygon if present
+        if (polygon) {
             const points = this.calculateStarPoints(newX, newY, 5, 20, 10);
             polygon.setAttribute('points', points);
+        }
+
+        // Always update Hit Shield if present
+        if (hitCircle) {
+            hitCircle.setAttribute('cx', newX);
+            hitCircle.setAttribute('cy', newY);
         }
 
         // Update Selection Ring
@@ -353,6 +383,10 @@ export class Editor {
             this.selectedPlayer.y = newY;
         }
 
+        // UPDATE DATASET
+        this.draggedElement.dataset.x = newX;
+        this.draggedElement.dataset.y = newY;
+
         // Update Route (Move ENTIRE route)
         if (this.mode !== 'formation') {
             const routeId = this.draggedElement.dataset.routeId;
@@ -362,6 +396,7 @@ export class Editor {
                 if (routeGroup.tagName.toLowerCase() === 'polyline') {
                     // ... old logic, or just ignore (it will be redrawn on next render)
                 } else {
+                    // Update Lines
                     const lines = routeGroup.querySelectorAll('line');
                     lines.forEach(line => {
                         const x1 = parseFloat(line.getAttribute('x1'));
@@ -374,10 +409,41 @@ export class Editor {
                         line.setAttribute('x2', x2 + dx);
                         line.setAttribute('y2', y2 + dy);
                     });
+
+                    // Update Paths (Squiggly)
+                    const paths = routeGroup.querySelectorAll('path');
+                    paths.forEach(path => {
+                        // We need to shift every point in d
+                        const d = path.getAttribute('d');
+                        if (!d) return;
+
+                        // Better approach: Re-construct string
+                        let newD = "";
+                        const parts = d.split(' ');
+
+                        let isX = true; // First number is X
+                        for (let i = 0; i < parts.length; i++) {
+                            const p = parts[i];
+                            const val = parseFloat(p);
+                            if (isNaN(val)) {
+                                newD += p + " ";
+                            } else {
+                                if (isX) {
+                                    newD += (val + dx).toFixed(2) + " ";
+                                    isX = false;
+                                } else {
+                                    newD += (val + dy).toFixed(2) + " ";
+                                    isX = true;
+                                }
+                            }
+                        }
+                        path.setAttribute('d', newD.trim());
+                    });
                 }
             }
         }
     }
+
 
     handleMouseUp(e) {
         this.isDragging = false;
@@ -457,18 +523,50 @@ export class Editor {
 
         // Ensure route ID exists
         const routeId = player.routeId || ('r_' + player.id);
-        g.setAttribute('data-routeId', routeId);
+        // FIX: Use dataset property to ensure correct attribute mapping (data-route-id)
+        g.dataset.routeId = routeId;
+        // ROBUST: Store state in dataset
+        g.dataset.x = player.x;
+        g.dataset.y = player.y;
+        g.dataset.color = player.color || '#1f2937';
+        g.dataset.label = player.label || '';
+        g.dataset.isPrimary = !!player.isPrimary;
 
-        // Circle
-        const shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        shape.setAttribute('cx', player.x);
-        shape.setAttribute('cy', player.y);
-        shape.setAttribute('r', 15);
+        // Check for Primary (Star)
+        // Check for Primary (Star)
+        if (player.isPrimary) {
+            // HIT TARGET: Transparent circle to fill gaps between star spikes
+            const hitCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            hitCircle.setAttribute('class', 'hit-area'); // MARKER CLASS
+            hitCircle.setAttribute('cx', player.x);
+            hitCircle.setAttribute('cy', player.y);
+            hitCircle.setAttribute('r', '20'); // Match star outer radius
+            hitCircle.setAttribute('fill', 'transparent'); // Invisible but clickable
+            hitCircle.setAttribute('stroke', 'none');
+            g.appendChild(hitCircle);
 
-        shape.setAttribute('stroke', player.color || '#1f2937');
-        shape.setAttribute('stroke-width', '3');
-        shape.setAttribute('fill', player.color || '#1f2937'); // Solid fill
-        shape.setAttribute('fill-opacity', '1');
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            const points = this.calculateStarPoints(player.x, player.y, 5, 20, 10);
+            polygon.setAttribute('points', points);
+
+            polygon.setAttribute('stroke', player.color || '#1f2937');
+            polygon.setAttribute('stroke-width', '3');
+            polygon.setAttribute('fill', player.color || '#1f2937');
+            polygon.setAttribute('fill-opacity', '1');
+            g.appendChild(polygon);
+        } else {
+            // Circle
+            const shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            shape.setAttribute('cx', player.x);
+            shape.setAttribute('cy', player.y);
+            shape.setAttribute('r', 15);
+
+            shape.setAttribute('stroke', player.color || '#1f2937');
+            shape.setAttribute('stroke-width', '3');
+            shape.setAttribute('fill', player.color || '#1f2937'); // Solid fill
+            shape.setAttribute('fill-opacity', '1');
+            g.appendChild(shape);
+        }
 
         // Text
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -480,7 +578,6 @@ export class Editor {
         text.setAttribute('fill', '#ffffff'); // White text on filled circle
         text.style.pointerEvents = 'none';
 
-        g.appendChild(shape);
         g.appendChild(text);
 
         // Append to layer
@@ -526,37 +623,64 @@ export class Editor {
 
         const styles = player.routeStyles || [];
         const color = player.color || '#1f2937';
-        const hex = color.replace('#', '');
+        // FIX: Robust hex generation (case insensitive, strip all #)
+        const hex = color.replace(/#/g, '').toLowerCase();
         const endType = player.routeEndType || 'arrow';
 
         points.forEach((pt, index) => {
             let style = styles[index] || 'solid';
-            // Force fallback if style was squiggly
-            if (style === 'squiggly') style = 'solid';
+            // Removed fallback: if (style === 'squiggly') style = 'solid';
 
-            const segment = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            segment.setAttribute('x1', startX);
-            segment.setAttribute('y1', startY);
-            segment.setAttribute('x2', pt.x);
-            segment.setAttribute('y2', pt.y);
-            if (style === 'dashed') {
-                segment.setAttribute('stroke-dasharray', '8,8');
-            }
+            // Handle Squiggly as Path, others as Line?
+            // "Use <path> instead of <line> for squiggly segments"
 
-            segment.setAttribute('stroke', color);
-            segment.setAttribute('stroke-width', '3');
-            segment.dataset.style = style; // For retrieval
+            if (style === 'squiggly') {
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                // Calculate d
+                const d = this.createZigZagPath(startX, startY, pt.x, pt.y);
+                path.setAttribute('d', d);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', color);
+                path.setAttribute('stroke-width', '3');
+                path.setAttribute('stroke-linejoin', 'round');
+                path.setAttribute('stroke-linecap', 'round');
+                path.dataset.style = style; // For retrieval
 
-            // Marker (only on last segment)
-            if (index === points.length - 1) {
-                if (endType === 'circle') {
-                    segment.setAttribute('marker-end', `url(#circlehead-${hex})`);
-                } else {
-                    segment.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+                // Marker on Path (only last segment)
+                if (index === points.length - 1) {
+                    if (endType === 'circle') {
+                        path.setAttribute('marker-end', `url(#circlehead-${hex})`);
+                    } else {
+                        path.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+                    }
                 }
-            }
 
-            routeGroup.appendChild(segment);
+                routeGroup.appendChild(path);
+
+            } else {
+                const segment = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                segment.setAttribute('x1', startX);
+                segment.setAttribute('y1', startY);
+                segment.setAttribute('x2', pt.x);
+                segment.setAttribute('y2', pt.y);
+                if (style === 'dashed') {
+                    segment.setAttribute('stroke-dasharray', '8,8');
+                }
+
+                segment.setAttribute('stroke', color);
+                segment.setAttribute('stroke-width', '3');
+                segment.dataset.style = style; // For retrieval
+
+                // Marker (only on last segment)
+                if (index === points.length - 1) {
+                    if (endType === 'circle') {
+                        segment.setAttribute('marker-end', `url(#circlehead-${hex})`);
+                    } else {
+                        segment.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+                    }
+                }
+                routeGroup.appendChild(segment);
+            }
 
             // Update start for next segment
             startX = pt.x;
@@ -597,11 +721,9 @@ export class Editor {
 
         // Visual indicator: Dashed Ring
         const circle = playerObj.element.querySelector('circle');
-        if (circle) {
-            // Add a dedicated selection ring (or modify stroke)
-            // Strategy: Add a new circle element "selection-ring" to the group?
-            // Or just modify the stroke as requested. "Dashed circle around them"
+        const polygon = playerObj.element.querySelector('polygon'); // Star
 
+        if (circle || polygon) {
             // Check if ring exists
             let ring = playerObj.element.querySelector('.selection-ring');
             if (!ring) {
@@ -615,9 +737,16 @@ export class Editor {
                 ring.setAttribute('stroke-dasharray', '6,4'); // Tweak dash
                 ring.style.pointerEvents = 'none';
 
-                // Get cx/cy from primary circle
-                ring.setAttribute('cx', circle.getAttribute('cx'));
-                ring.setAttribute('cy', circle.getAttribute('cy'));
+                // Get coordinates
+                if (circle) {
+                    ring.setAttribute('cx', circle.getAttribute('cx'));
+                    ring.setAttribute('cy', circle.getAttribute('cy'));
+                } else {
+                    // Star: use text center or polygon calcs? Text is simpler.
+                    const text = playerObj.element.querySelector('text');
+                    ring.setAttribute('cx', text.getAttribute('x'));
+                    ring.setAttribute('cy', text.getAttribute('y'));
+                }
 
                 playerObj.element.appendChild(ring);
             } else {
@@ -690,15 +819,22 @@ export class Editor {
         // If no lines, player center.
         // If lines, end of last line.
         let startX, startY;
-        const lines = routeGroup.querySelectorAll('line');
+        const lines = routeGroup.querySelectorAll('line, path'); // Queries both
 
         if (lines.length === 0) {
             startX = playerObj.x;
             // Fallback to DOM if object is stale/partial (safety)
             if (startX === undefined) {
                 const circle = playerObj.element.querySelector('circle');
-                startX = parseFloat(circle.getAttribute('cx'));
-                startY = parseFloat(circle.getAttribute('cy'));
+                if (circle) {
+                    startX = parseFloat(circle.getAttribute('cx'));
+                    startY = parseFloat(circle.getAttribute('cy'));
+                } else {
+                    // Star case
+                    const text = playerObj.element.querySelector('text');
+                    startX = parseFloat(text.getAttribute('x'));
+                    startY = parseFloat(text.getAttribute('y'));
+                }
                 // Self-heal object
                 playerObj.x = startX;
                 playerObj.y = startY;
@@ -707,10 +843,20 @@ export class Editor {
             }
         } else {
             const last = lines[lines.length - 1];
-            startX = parseFloat(last.getAttribute('x2'));
-            startY = parseFloat(last.getAttribute('y2'));
+            if (last.tagName === 'line') {
+                startX = parseFloat(last.getAttribute('x2'));
+                startY = parseFloat(last.getAttribute('y2'));
+            } else if (last.tagName === 'path') {
+                // Parse d for last point
+                // Format: "... L x y"
+                const d = last.getAttribute('d');
+                const parts = d.split(' ');
+                // If it ends with L x y
+                startX = parseFloat(parts[parts.length - 2]);
+                startY = parseFloat(parts[parts.length - 1]);
+            }
 
-            // Remove marker from OLD last line
+            // Remove marker from OLD last line/path
             last.removeAttribute('marker-end');
         }
 
@@ -807,26 +953,13 @@ export class Editor {
 
     updateRouteStyle(index, style) {
         if (!this.selectedPlayer) return;
-        const routeGroup = document.getElementById(this.selectedPlayer.routeId);
 
-        if (routeGroup && routeGroup.tagName.toLowerCase() === 'g') {
-            const lines = routeGroup.querySelectorAll('line');
-            const line = lines[index];
-            if (line) {
-                if (style === 'dashed') {
-                    line.setAttribute('stroke-dasharray', '8,8');
-                } else {
-                    line.setAttribute('stroke-dasharray', '');
-                }
-                line.dataset.style = style;
+        // Update Internal Data
+        if (!this.selectedPlayer.routeStyles) this.selectedPlayer.routeStyles = [];
+        this.selectedPlayer.routeStyles[index] = style;
 
-                // Update internal data model if we want immediate sync, 
-                // but usually we rely on getData() at save time.
-                // However, selectedPlayer.routeStyles needs update for UI consistency if we re-click
-                if (!this.selectedPlayer.routeStyles) this.selectedPlayer.routeStyles = [];
-                this.selectedPlayer.routeStyles[index] = style;
-            }
-        }
+        // Force Re-render to handle element type changes (Line vs Path)
+        this.renderRoute(this.selectedPlayer);
     }
 
     updateRouteEndType(type) {
@@ -834,8 +967,11 @@ export class Editor {
         const routeGroup = document.getElementById(this.selectedPlayer.routeId);
 
         if (routeGroup && routeGroup.tagName.toLowerCase() === 'g') {
-            const color = this.selectedPlayer.element.querySelector('circle').getAttribute('fill');
-            const hex = color.replace('#', '');
+            // FIX: Ignore invisible hit-area when reading color
+            const circle = this.selectedPlayer.element.querySelector('circle:not(.hit-area)');
+            const color = circle ? circle.getAttribute('fill') : (this.selectedPlayer.color || '#1f2937');
+
+            const hex = color.replace(/#/g, '').toLowerCase();
             const lines = routeGroup.querySelectorAll('line');
 
             // Update marker on LAST segment only
@@ -856,10 +992,6 @@ export class Editor {
 
     updateElementColor(color) {
         if (this.selectedPlayer) {
-            const circle = this.selectedPlayer.element.querySelector('circle');
-            circle.setAttribute('stroke', color);
-            circle.setAttribute('fill', color);
-
             // Update Selection Ring
             const ring = this.selectedPlayer.element.querySelector('.selection-ring');
             if (ring) {
@@ -867,27 +999,44 @@ export class Editor {
             }
 
             // Update selected player object color property
+            // Update selected player object color property
             this.selectedPlayer.color = color;
-
-            // Update Circle OR Star
-            const shape = this.selectedPlayer.element.querySelector('circle') || this.selectedPlayer.element.querySelector('polygon');
-            if (shape) {
-                shape.setAttribute('stroke', color);
-                shape.setAttribute('fill', color);
+            // ROBUST: Update dataset for persistence
+            if (this.selectedPlayer.element) {
+                this.selectedPlayer.element.dataset.color = color;
             }
+
+            // Update Circle (if exists, ignore hit-area AND selection-ring)
+            const circle = this.selectedPlayer.element.querySelector('circle:not(.hit-area):not(.selection-ring)');
+            if (circle) {
+                circle.setAttribute('stroke', color);
+                circle.setAttribute('fill', color);
+            }
+
+            // Update Polygon/Star (if exists)
+            const polygon = this.selectedPlayer.element.querySelector('polygon');
+            if (polygon) {
+                polygon.setAttribute('stroke', color);
+                polygon.setAttribute('fill', color);
+            }
+
+
 
             // Update Route Color
             const routeGroup = document.getElementById(this.selectedPlayer.routeId);
             if (routeGroup) {
-                // If it's a legacy polyline, convert or just update (renderRoute handles structure)
-                // But simplified:
-                if (routeGroup.tagName.toLowerCase() === 'g') {
-                    const hex = color.replace('#', '');
-                    const lines = routeGroup.querySelectorAll('line');
-                    lines.forEach((line, index) => {
-                        line.setAttribute('stroke', color);
-                        // Update marker on last segment
-                        if (index === lines.length - 1) {
+                const hex = color.replace(/#/g, '').toLowerCase();
+
+                // Update Lines
+                const lines = routeGroup.querySelectorAll('line');
+                lines.forEach((line, index) => {
+                    line.setAttribute('stroke', color);
+                    // Update marker on last segment (if line)
+                    // Note: markers are usually on the very last element of the group
+                    if (index === lines.length - 1 && routeGroup.lastElementChild === line) {
+                        // This check is a bit loose if paths are mixed. 
+                        // Better: check if it HAS a marker-end?
+                        if (line.hasAttribute('marker-end')) {
                             const endType = routeGroup.dataset.endType || 'arrow';
                             if (endType === 'circle') {
                                 line.setAttribute('marker-end', `url(#circlehead-${hex})`);
@@ -895,8 +1044,30 @@ export class Editor {
                                 line.setAttribute('marker-end', `url(#arrowhead-${hex})`);
                             }
                         }
-                    });
-                }
+                    } else if (line.hasAttribute('marker-end')) {
+                        // In case lines are mixed, just update any marker found
+                        const endType = routeGroup.dataset.endType || 'arrow';
+                        if (endType === 'circle') {
+                            line.setAttribute('marker-end', `url(#circlehead-${hex})`);
+                        } else {
+                            line.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+                        }
+                    }
+                });
+
+                // Update Paths (Squiggly)
+                const paths = routeGroup.querySelectorAll('path');
+                paths.forEach(path => {
+                    path.setAttribute('stroke', color);
+                    if (path.hasAttribute('marker-end')) {
+                        const endType = routeGroup.dataset.endType || 'arrow';
+                        if (endType === 'circle') {
+                            path.setAttribute('marker-end', `url(#circlehead-${hex})`);
+                        } else {
+                            path.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+                        }
+                    }
+                });
             }
 
             // Update Sidebar Preview
@@ -985,81 +1156,122 @@ export class Editor {
         }
     }
 
-    calculateStarPoints(cx, cy, spikes, outerRadius, innerRadius) {
-        let rot = Math.PI / 2 * 3;
-        let x = cx;
-        let y = cy;
-        let step = Math.PI / spikes;
-
-        let points = [];
-        for (let i = 0; i < spikes; i++) {
-            x = cx + Math.cos(rot) * outerRadius;
-            y = cy + Math.sin(rot) * outerRadius;
-            points.push(`${x},${y}`);
-            rot += step;
-
-            x = cx + Math.cos(rot) * innerRadius;
-            y = cy + Math.sin(rot) * innerRadius;
-            points.push(`${x},${y}`);
-            rot += step;
-        }
-        return points.join(' ');
-    }
-
-    createZigZagPath(x1, y1, x2, y2) {
-        // Parametric wiggle
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx);
-
-        // Number of zigs
-        const wavelength = 20;
-        const amplitude = 10;
-        const steps = Math.ceil(dist / wavelength);
-
-        let d = `M ${x1} ${y1}`;
-
-        for (let i = 1; i <= steps; i++) {
-            const t = i / steps;
-
-            // Current point on straight line
-            const cx = x1 + dx * t;
-            const cy = y1 + dy * t;
-
-            // Offset perpendicular
-            // If straight line is vector V, perpendicular is (-Vy, Vx)
-
-            // Zig vs Zag
-            const sign = (i % 2 === 0) ? 1 : -1;
-
-            // Perpendicular unit vector
-            const px = -Math.sin(angle);
-            const py = Math.cos(angle);
-
-            // Wiggle point
-            // For last point, we must land exactly on x2,y2. 
-            // So wiggle should only apply to intermediates. 
-            // Actually 'path' handles it.
-
-            if (i === steps) {
-                d += ` L ${x2} ${y2}`;
-            } else {
-                const wx = cx + px * amplitude * sign;
-                const wy = cy + py * amplitude * sign;
-                d += ` L ${wx} ${wy}`;
-            }
-        }
-        return d;
-    }
-
-    // Legacy methods removed (addRoutePoint, updateRouteStart)
-
 
     getPointFromEvent(e) {
         const pt = this.svg.createSVGPoint();
         pt.x = e.clientX;
         pt.y = e.clientY;
         return pt.matrixTransform(this.svg.getScreenCTM().inverse());
+    }
+    calculateStarPoints(cx, cy, spikes = 5, outerRadius = 20, innerRadius = 10) {
+        let rot = Math.PI / 2 * 3;
+        let x = cx;
+        let y = cy;
+        let step = Math.PI / spikes;
+        let str = "";
+
+        for (let i = 0; i < spikes; i++) {
+            x = cx + Math.cos(rot) * outerRadius;
+            y = cy + Math.sin(rot) * outerRadius;
+            str += x.toFixed(2) + "," + y.toFixed(2) + " ";
+            rot += step;
+
+            x = cx + Math.cos(rot) * innerRadius;
+            y = cy + Math.sin(rot) * innerRadius;
+            str += x.toFixed(2) + "," + y.toFixed(2) + " ";
+            rot += step;
+        }
+        return str;
+    }
+
+    setPrimaryPlayer(id) {
+        // Toggle primary status for this player, ensure single primary
+        const data = this.getData();
+        const target = data.players.find(p => p.id === id);
+
+        if (!target) return;
+
+        // Logic: specific requirements "Toggle... Only one per play."
+        const wasPrimary = target.isPrimary;
+
+        // Reset all
+        data.players.forEach(p => p.isPrimary = false);
+
+        // Set target if it wasn't already (toggle)
+        if (!wasPrimary) {
+            target.isPrimary = true;
+        }
+
+        // CRITICAL: Preserve Coordinates from selectedPlayer if available
+        // This prevents "Disappearing" bugs if DOM read (getData) failed to capture Position from Star/Polygon
+        if (this.selectedPlayer && this.selectedPlayer.id === id) {
+            target.x = this.selectedPlayer.x;
+            target.y = this.selectedPlayer.y;
+        }
+
+        // Reload data to reflect changes
+        this.loadData(data);
+
+        // Restore Selection
+        const el = this.playersLayer.querySelector(`[data-id="${id}"]`);
+        if (el) {
+            const rehydrated = data.players.find(p => p.id === id); // Get updated state
+            const obj = {
+                ...rehydrated,
+                element: el,
+                routeId: 'r_' + id
+            };
+            this.selectPlayer(obj);
+        }
+    }
+
+    createZigZagPath(x1, y1, x2, y2) {
+        if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return `M 0 0`; // Fail safe
+        // Create a zigzag/wavy path between two points
+        const dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        if (dist < 5) return `M ${x1} ${y1} L ${x2} ${y2}`;
+
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+
+        // Parameters
+        const segmentLength = 15;
+        const amplitude = 6;
+        const steps = Math.floor(dist / segmentLength);
+
+        let d = `M ${x1} ${y1}`;
+        let cx = x1;
+        let cy = y1;
+
+        // We move along the line, adding offsets perpendicular
+        const dx = (x2 - x1) / steps;
+        const dy = (y2 - y1) / steps;
+
+        for (let i = 1; i <= steps; i++) {
+            // Intermediate point on line
+            const progress = i / steps;
+            const tx = x1 + (x2 - x1) * progress;
+            const ty = y1 + (y2 - y1) * progress;
+
+            // Zig or Zag
+            // If i is odd, go 'left/up', even 'right/down' relative to line
+            // Actually, wave usually goes up then down.
+            // Perpendicular vector (-sin, cos)
+            const offset = (i % 2 === 0) ? amplitude : -amplitude;
+
+            const wx = tx + Math.cos(angle + Math.PI / 2) * offset;
+            const wy = ty + Math.sin(angle + Math.PI / 2) * offset;
+
+            // If last point, we must reconnect to end?
+            // Actually a zig zag should probably not land offset.
+            // If steps is odd, we end offset.
+            // Let's force landing at x2, y2
+            if (i === steps) {
+                d += ` L ${x2} ${y2}`;
+            } else {
+                d += ` L ${wx} ${wy}`;
+            }
+        }
+
+        return d;
     }
 }

@@ -382,6 +382,10 @@ class App {
                     toggleLockBtn.classList.add('btn-warning');
                     toggleLockBtn.classList.remove('btn-primary'); // Was btn-icon-light
 
+                    // Enable Layout Logic
+                    document.body.classList.add('editing');
+                    this.ui.showEditor();
+
                     // Delete Button is always visible now
 
                 } else {
@@ -397,6 +401,10 @@ class App {
                         this.saveCurrentPlay();
                     }
                     this.editor.setLocked(true);
+
+                    // Disable Layout Logic
+                    document.body.classList.remove('editing');
+                    this.ui.hideSidebar();
 
                     // if (lockIcon) lockIcon.textContent = '🔒'; // Removed
                     if (lockText) lockText.textContent = 'Edit';
@@ -650,6 +658,9 @@ class App {
         // Load into editor
         this.editor.loadData(play);
         this.editor.setLocked(true); // Default to locked mode
+
+        // Ensure not in editing layout
+        document.body.classList.remove('editing');
 
         // Fix: Force Sidebar CLOSED until user explicitly interacts
         this.ui.hideSidebar();
