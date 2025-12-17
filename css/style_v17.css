@@ -1974,3 +1974,9 @@ body {
 .hidden {
     display: none !important;
 }
+/* Active State for Primary Button */
+#make-primary-btn.active {
+    color: #EAB308 !important;
+    border-color: #EAB308 !important;
+    background-color: #FEF9C3 !important;
+}
