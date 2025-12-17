@@ -40,10 +40,89 @@ export class UI {
         }
         this.headerNewPlayBtn = document.getElementById('header-new-play-btn');
 
+        // User Profile Elements
+        this.userAvatarEl = document.getElementById('user-avatar');
+        this.userNameEl = document.getElementById('display-user-name');
+        this.userEmailEl = document.getElementById('display-user-email');
+
+        // Sidebar Elements
+        this.sidebar = document.getElementById('editor-sidebar-right');
+        this.sidebarCloseBtn = document.getElementById('close-property-sidebar');
+        this.propPlayerPreview = document.getElementById('prop-player-preview'); // Circle
+        this.propPlayerLabelInput = document.getElementById('prop-player-label'); // Input
+
         this.initEventListeners();
     }
 
     initEventListeners() {
+        // Sidebar Close
+        if (this.sidebarCloseBtn) {
+            this.sidebarCloseBtn.addEventListener('click', () => {
+                this.hideSidebar();
+                // Also tell editor to deselect
+                if (this.app.editor) this.app.editor.deselectPlayer();
+            });
+        }
+
+        // Sidebar Actions
+        const undoBtn = document.getElementById('undo-change');
+        if (undoBtn) {
+            undoBtn.addEventListener('click', () => {
+                if (this.app.editor) this.app.editor.undoLastRoutePoint();
+            });
+        }
+
+        const deleteBtn = document.getElementById('delete-element');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                if (this.app.editor) this.app.editor.deleteSelected();
+            });
+        }
+
+        // Color Grid
+        this.colorBtns = document.querySelectorAll('.color-btn-lg');
+        this.colorBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const color = e.target.dataset.color;
+                if (this.app.editor) this.app.editor.updateElementColor(color);
+
+                // Update local UI state
+                this.colorBtns.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+
+        // Player Label Input
+        if (this.propPlayerLabelInput) {
+            this.propPlayerLabelInput.addEventListener('input', (e) => {
+                const val = e.target.value.substring(0, 2).toUpperCase();
+                if (e.target.value !== val) e.target.value = val; // Enforce limit in UI
+                if (this.app.editor) this.app.editor.updatePlayerLabel(val);
+            });
+        }
+
+        // Close Sidebar Button
+        const closeSidebarBtn = document.getElementById('close-sidebar');
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', () => this.hideSidebar());
+        }
+
+        // Route Style Listeners removed (handled dynamically in updateSidebar)
+
+        // Route End (Arrow/Circle)
+        const endBtns = document.querySelectorAll('.segment-btn[data-end]');
+        endBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                endBtns.forEach(b => b.classList.remove('active'));
+                const target = e.target.closest('.segment-btn');
+                target.classList.add('active');
+
+                const type = target.dataset.end;
+                if (this.app.editor) this.app.editor.updateRouteEndType(type);
+            });
+        });
+
+        // ... Existing Listeners ...
         // Team Size Change (Delegation)
         if (this.teamSizeSelector) {
             this.teamSizeSelector.addEventListener('click', (e) => {
@@ -448,8 +527,8 @@ export class UI {
 
         // Background
         const rect = document.createElementNS(svgNS, "rect");
-        rect.setAttribute("width", "800");
-        rect.setAttribute("height", "600");
+        rect.setAttribute("width", "1000");
+        rect.setAttribute("height", "700");
         rect.setAttribute("fill", "#ffffff");
         svg.appendChild(rect);
 
@@ -458,23 +537,29 @@ export class UI {
             const line = document.createElementNS(svgNS, "line");
             line.setAttribute("x1", "0");
             line.setAttribute("y1", y);
-            line.setAttribute("x2", "800");
+            line.setAttribute("x2", "1000");
             line.setAttribute("y2", y);
             line.setAttribute("stroke", color);
             line.setAttribute("stroke-width", width);
             svg.appendChild(line);
         };
 
-        // Lines: 150 (Light), 300 (Dark/LOS), 450 (Light)
-        createLine(150, '#e5e7eb', 2);
-        createLine(300, '#9ca3af', 4);
-        createLine(450, '#e5e7eb', 2);
+        // Center (LOS) - Dark Grey
+        createLine(350, '#9ca3af', 4);
+
+        // Lines Above
+        createLine(230, '#e5e7eb', 2);
+        createLine(110, '#e5e7eb', 2);
+
+        // Lines Below
+        createLine(470, '#e5e7eb', 2);
+        createLine(590, '#e5e7eb', 2);
     }
 
     createPlayPreviewSVG(play) {
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("viewBox", "0 0 800 600");
+        svg.setAttribute("viewBox", "0 0 1000 700");
         svg.setAttribute("width", "100%");
         svg.setAttribute("height", "100%");
         svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
@@ -503,7 +588,13 @@ export class UI {
 
                     // Markers: Try using global defs
                     const colorHex = (p.color || '#1f2937').replace('#', '');
-                    polyline.setAttribute("marker-end", `url(#arrowhead-${colorHex})`);
+                    const endType = p.routeEndType || 'arrow';
+
+                    if (endType === 'circle') {
+                        polyline.setAttribute("marker-end", `url(#circlehead-${colorHex})`);
+                    } else {
+                        polyline.setAttribute("marker-end", `url(#arrowhead-${colorHex})`);
+                    }
 
                     svg.appendChild(polyline);
                 }
@@ -547,7 +638,7 @@ export class UI {
         // Use SVG for precise aspect ratio scaling
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("viewBox", "0 0 800 600");
+        svg.setAttribute("viewBox", "0 0 1000 700");
         svg.setAttribute("width", "100%");
         svg.setAttribute("height", "100%");
         svg.setAttribute("preserveAspectRatio", "xMidYMid meet"); // Scale down to fit, maintain ratio
@@ -609,6 +700,168 @@ export class UI {
             snackbar.classList.add('hidden');
         }, duration);
     }
+    updateUserProfile(user, profile) {
+        if (!user) return;
+
+        // Use profile name if available, fallback to metadata, then default
+        const name = profile?.full_name || user.user_metadata?.full_name || 'Coach';
+        const email = user.email || '';
+
+        // Update Text
+        if (this.userNameEl) this.userNameEl.textContent = name;
+        if (this.userEmailEl) this.userEmailEl.textContent = email;
+
+        // Update Avatar
+        if (this.userAvatarEl) {
+            // If image URL exists
+            // const avatarUrl = user.user_metadata?.avatar_url;
+            // if (avatarUrl) { ... } else { ... }
+
+            // Using Initials
+            const initials = name
+                .split(' ')
+                .map(n => n[0])
+                .slice(0, 2)
+                .join('')
+                .toUpperCase() || 'HC';
+
+            this.userAvatarEl.textContent = initials;
+        }
+    }
+
+    updateSidebar(player) {
+        if (!this.sidebar) return;
+
+        this.sidebar.classList.remove('hidden');
+
+        // Show Content, Hide Empty
+        const emptyState = document.getElementById('sidebar-empty-state');
+        const content = document.getElementById('sidebar-content');
+        if (emptyState) emptyState.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+
+        // Update Circle Preview
+        if (this.propPlayerPreview) {
+            this.propPlayerPreview.textContent = player.label || ''; // Show label inside
+            this.propPlayerPreview.style.backgroundColor = player.color || '#3b82f6';
+        }
+
+        // Update Label Input
+        if (this.propPlayerLabelInput) {
+            this.propPlayerLabelInput.value = player.label || '';
+        }
+
+        // Update Primary Button
+        const primaryBtn = document.getElementById('make-primary-btn');
+        if (primaryBtn) {
+            if (player.isPrimary) {
+                primaryBtn.classList.add('active');
+            } else {
+                primaryBtn.classList.remove('active');
+            }
+        }
+
+        // Update Active Color Logic
+        const colorBtns = document.querySelectorAll('.color-btn-lg');
+        colorBtns.forEach(btn => {
+            if (btn.dataset.color === player.color) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Update End Type Selection
+        const endBtns = document.querySelectorAll('.segment-btn[data-end]');
+        endBtns.forEach(btn => {
+            if (btn.dataset.end === (player.routeEndType || 'arrow')) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Dynamic Route Segments
+        const container = document.getElementById('route-segments-container');
+        if (container) {
+            container.innerHTML = '';
+
+            const numSegments = (player.route || []).length;
+            const styles = player.routeStyles || [];
+
+            if (numSegments === 0) {
+                const msg = document.createElement('div');
+                msg.textContent = 'Click on field to add route segments';
+                msg.style.color = '#9ca3af';
+                msg.style.fontSize = '0.85rem';
+                msg.style.textAlign = 'center';
+                container.appendChild(msg);
+            }
+
+            for (let i = 0; i < numSegments; i++) {
+                const row = document.createElement('div');
+                row.style.marginBottom = '0.5rem';
+
+                const header = document.createElement('div');
+                header.textContent = `Segment ${i + 1}`;
+                header.style.fontSize = '0.8rem';
+                header.style.marginBottom = '0.2rem';
+                header.style.color = '#64748b';
+                row.appendChild(header);
+
+                const control = document.createElement('div');
+                control.className = 'segmented-control';
+
+                const currentStyle = styles[i] || 'solid';
+
+                // Helper to create buttons
+                const createBtn = (style, label, iconClass) => {
+                    const btn = document.createElement('button');
+                    btn.className = `segment-btn ${currentStyle === style ? 'active' : ''}`;
+                    if (iconClass) {
+                        btn.innerHTML = `<span class="${iconClass}"></span> ${label}`;
+                    } else {
+                        // Fallback or icon
+                        btn.textContent = label;
+                    }
+                    if (style === 'squiggly') {
+                        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 20 10" stroke="currentColor" fill="none" class="squiggly-icon"><path d="M0 10 Q2.5 0 5 10 T10 10 T15 10 T20 10" /></svg> Wave`;
+                        // Quick custom SVG for wave
+                        btn.innerHTML = `
+                            <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M2 6c2.5-5 5-5 7.5 0s5 5 7.5 0 5-5 7.5 0" />
+                            </svg>
+                         `;
+                    }
+
+                    btn.onclick = () => {
+                        this.app.editor.updateRouteStyle(i, style);
+                        // Update UI loop? Or relies on full re-render?
+                        // Simple active switch:
+                        Array.from(control.children).forEach(c => c.classList.remove('active'));
+                        btn.classList.add('active');
+                    };
+                    return btn;
+                };
+
+                const btnSolid = createBtn('solid', 'Solid', 'line-solid');
+                const btnDashed = createBtn('dashed', 'Dashed', 'line-dashed');
+
+                control.appendChild(btnSolid);
+                control.appendChild(btnDashed);
+
+                row.appendChild(control);
+                container.appendChild(row);
+            }
+        }
+    }
+
+    hideSidebar() {
+        if (this.sidebar) {
+            this.sidebar.classList.add('hidden');
+        }
+    }
+
     savePlaySettings() {
         if (!this.app.currentPlay) return;
 

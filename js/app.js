@@ -1,8 +1,8 @@
-import { Editor } from './editor.js?v=12';
-import { Store } from './store.js?v=12';
-import { UI } from './ui.js?v=12';
-import { getFormations } from './formations.js?v=12';
-import { AuthManager } from './auth.js?v=12';
+import { Editor } from './editor.js?v=15';
+import { Store } from './store.js?v=15';
+import { UI } from './ui.js?v=15';
+import { getFormations } from './formations.js?v=15';
+import { AuthManager } from './auth.js?v=15';
 
 class App {
     constructor() {
@@ -33,7 +33,7 @@ class App {
             if (!session) {
                 console.log('No session, switching to auth view');
                 this.switchView('auth');
-                this.bindAuthEvents(); // Prepare auth listeners
+                this.initEventListeners(); // Attach login/signup listeners
 
                 // Check specific auth mode from URL (e.g. ?mode=signup)
                 const urlParams = new URLSearchParams(window.location.search);
@@ -41,22 +41,35 @@ class App {
                     this.toggleAuthForms('signup');
                 }
 
+                this.initEventListeners(); // Attach login/signup listeners
                 return;
             }
 
             // If authenticated, proceed
             console.log('Session found, initializing app');
-            this.initializeApp();
+            await this.initializeApp();
+            console.log('App initialized successfully');
         } catch (err) {
             console.error('Initialization error:', err);
             alert('Failed to initialize app: ' + err.message);
             // Fallback to auth view just in case
             this.switchView('auth');
-            this.bindAuthEvents();
         }
     }
 
     async initializeApp() {
+        console.log('initializeApp: start');
+        const user = this.auth.getUser();
+        let profile = null;
+        if (user) {
+            console.log('Fetching profile for', user.id);
+            profile = await this.store.getProfile(user.id);
+            console.log('Profile fetched');
+        }
+
+        // Update User Profile UI
+        this.ui.updateUserProfile(user, profile);
+
         this.editor.init();
 
         // Check for template_id in URL
@@ -115,10 +128,16 @@ class App {
         }
 
         // Helper to check playbooks and route
+        console.log('Fetching playbooks...');
         const playbooks = await this.store.getPlaybooks();
+        console.log('Playbooks fetched:', playbooks.length);
+
         if (playbooks.length > 0) {
-            this.openPlaybook(playbooks[0].id);
+            console.log('Opening first playbook:', playbooks[0].id);
+            await this.openPlaybook(playbooks[0].id);
+            console.log('Playbook opened');
         } else {
+            console.log('No playbooks, switching to create view');
             this.switchView('create');
         }
 
@@ -161,7 +180,12 @@ class App {
                     await this.auth.login(email, password);
                     this.initializeApp();
                 } catch (error) {
-                    alert('Login failed: ' + error.message);
+                    console.error('Login error:', error);
+                    let msg = error.message;
+                    if (msg === 'Invalid login credentials') {
+                        msg = 'Incorrect email or password. Please try again.';
+                    }
+                    alert(msg);
                 }
             });
         }
@@ -625,6 +649,10 @@ class App {
 
         // Load into editor
         this.editor.loadData(play);
+        this.editor.setLocked(true); // Default to locked mode
+
+        // Fix: Force Sidebar CLOSED until user explicitly interacts
+        this.ui.hideSidebar();
 
         // Update Play Name Input
         const nameInput = document.getElementById('play-name');

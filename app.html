@@ -5,11 +5,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PlayMaker - Flag Football Designer</title>
-    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/style_v17.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Global Error Handler for debugging
+        window.onerror = function (msg, url, line, col, error) {
+            const div = document.createElement('div');
+            div.style.position = 'fixed';
+            div.style.top = '0';
+            div.style.left = '0';
+            div.style.width = '100%';
+            div.style.height = '100%';
+            div.style.backgroundColor = 'rgba(0,0,0,0.8)';
+            div.style.color = 'red';
+            div.style.padding = '20px';
+            div.style.zIndex = '9999';
+            div.style.overflow = 'auto';
+            div.style.fontSize = '16px';
+            div.style.fontFamily = 'monospace';
+            div.innerHTML = `<h3>Application Error</h3>
+            <p><strong>Message:</strong> ${msg}</p>
+            <p><strong>File:</strong> ${url}:${line}:${col}</p>
+            <pre>${error ? error.stack : ''}</pre>`;
+            document.body.appendChild(div);
+            return false;
+        };
+        // Catch unhandled promise rejections too
+        window.onunhandledrejection = function (event) {
+            window.onerror(event.reason.message || 'Unhandled Rejection', '', 0, 0, event.reason);
+        };
+    </script>
 </head>
 
 <body>
@@ -43,6 +71,77 @@
             <marker id="arrowhead-1f2937" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
                 markerUnits="strokeWidth">
                 <polygon points="0 0, 10 5, 0 10" fill="#1f2937" />
+            </marker>
+            <!-- New Colors -->
+            <marker id="arrowhead-f97316" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#f97316" />
+            </marker>
+            <marker id="arrowhead-3b82f6" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#3b82f6" />
+            </marker>
+            <marker id="arrowhead-a855f7" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#a855f7" />
+            </marker>
+            <marker id="arrowhead-64748b" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#64748b" />
+            </marker>
+            <!-- Circle Markers (Empty/Stroked) -->
+            <marker id="circlehead-6366f1" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#6366f1" stroke-width="2" />
+            </marker>
+            <marker id="circlehead-ef4444" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#ef4444" stroke-width="2" />
+            </marker>
+            <marker id="circlehead-22c55e" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#22c55e" stroke-width="2" />
+            </marker>
+            <marker id="circlehead-eab308" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#eab308" stroke-width="2" />
+            </marker>
+            <marker id="circlehead-ec4899" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#ec4899" stroke-width="2" />
+            </marker>
+            <marker id="circlehead-06b6d4" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#06b6d4" stroke-width="2" />
+            </marker>
+            <marker id="circlehead-1f2937" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#1f2937" stroke-width="2" />
+            </marker>
+            <marker id="circlehead-f97316" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#f97316" stroke-width="2" />
+            </marker>
+            <marker id="circlehead-3b82f6" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+            </marker>
+            <marker id="circlehead-a855f7" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#a855f7" stroke-width="2" />
+            </marker>
+            <marker id="circlehead-64748b" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#64748b" stroke-width="2" />
+            </marker>
+            <!-- Black Markers -->
+            <marker id="arrowhead-000000" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <polygon points="0 0, 10 5, 0 10" fill="#000000" />
+            </marker>
+            <marker id="circlehead-000000" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"
+                markerUnits="strokeWidth">
+                <circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#000000" stroke-width="2" />
             </marker>
         </defs>
     </svg>
@@ -123,288 +222,371 @@
                                 </div>
                             </div>
                         </div>
-                        <small class="text-muted">Click the formation to customize default player positions</small>
-                    </div>
+                    </div> <!-- End #sidebar-content -->
+                    <small class="text-muted">Click the formation to customize default player positions</small>
+                </div>
 
-                    <div class="modal-section" id="admin-options-container" style="display:none;">
-                        <h3>Admin Options</h3>
-                        <div class="modal-field-checkbox">
-                            <input type="checkbox" id="settings-is-public">
-                            <label for="settings-is-public">Make Public Template</label>
-                        </div>
-                    </div>
-
-                    <div class="modal-section">
-                        <h3>Actions</h3>
-                        <button id="btn-delete-playbook" class="btn-danger-block">
-                            Delete Playbook
-                        </button>
+                <div class="modal-section" id="admin-options-container" style="display:none;">
+                    <h3>Admin Options</h3>
+                    <div class="modal-field-checkbox">
+                        <input type="checkbox" id="settings-is-public">
+                        <label for="settings-is-public">Make Public Template</label>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button id="close-settings-btn" class="btn-outline-prof">Close</button>
-                    <button id="save-settings-btn" class="btn-primary-prof">
-                        Save Changes
+
+                <div class="modal-section">
+                    <h3>Actions</h3>
+                    <button id="btn-delete-playbook" class="btn-danger-block">
+                        Delete Playbook
                     </button>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button id="close-settings-btn" class="btn-outline-prof">Close</button>
+                <button id="save-settings-btn" class="btn-primary-prof">
+                    Save Changes
+                </button>
             </div>
         </div>
+    </div>
 
-        <!-- Auth View -->
-        <div id="view-auth" class="view-section hidden">
-            <div class="auth-overlay">
-                <div class="auth-card">
-                    <div class="auth-header">
-                        <img src="images/logo.png" alt="Playmaker Logo" class="auth-logo"
-                            style="height: 100px; width: auto;">
-                    </div>
-
-                    <!-- Login Form -->
-                    <div id="form-login" class="auth-form-container">
-                        <h2>Welcome back</h2>
-                        <div class="form-group">
-                            <label for="login-email">Email</label>
-                            <input type="email" id="login-email" class="light-input" placeholder="coach@team.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="login-password">Password</label>
-                            <input type="password" id="login-password" class="light-input" placeholder="••••••••">
-                        </div>
-                        <button id="btn-login" class="btn-primary full-width">Log In</button>
-
-                        <div class="auth-toggle">
-                            Don't have an account? <a href="#" id="link-to-signup">Sign up</a>
-                        </div>
-                    </div>
-
-                    <!-- Signup Form -->
-                    <div id="form-signup" class="auth-form-container hidden">
-                        <h2>Create an account</h2>
-                        <div class="form-group">
-                            <label for="signup-name">Full Name</label>
-                            <input type="text" id="signup-name" class="light-input" placeholder="e.g. Coach Steve">
-                        </div>
-                        <div class="form-group">
-                            <label for="signup-email">Email</label>
-                            <input type="email" id="signup-email" class="light-input" placeholder="coach@team.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="signup-password">Password</label>
-                            <input type="password" id="signup-password" class="light-input"
-                                placeholder="Create a password">
-                        </div>
-                        <button id="btn-signup" class="btn-primary full-width">Sign Up</button>
-
-                        <div class="auth-toggle">
-                            Already have an account? <a href="#" id="link-to-login">Log in</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-        <!-- VIEW: Playbook Overview -->
-        <div id="view-playbook-overview" class="view-section hidden">
-            <!-- Sidebar -->
-            <aside class="sidebar-left modern-sidebar">
-                <div class="app-brand-area">
-                    <img src="images/logo.png" alt="PlayMaker Logo" class="app-logo"
-                        style="max-width: 100%; height: auto; padding: 10px;">
+    <!-- Auth View -->
+    <div id="view-auth" class="view-section hidden">
+        <div class="auth-overlay">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <img src="images/logo.png" alt="Playmaker Logo" class="auth-logo"
+                        style="height: 100px; width: auto;">
                 </div>
 
-                <div class="current-playbook-selector">
-                    <!-- Dropdown style -->
-                    <button id="switch-playbook-btn" class="playbook-dropdown-btn">
-                        <span class="dot-indicator">●</span>
-                        <span id="current-playbook-name">Vikings 3/4</span>
-                        <span class="chevron">▾</span>
-                    </button>
-                    <!-- Dropdown Menu -->
-                    <div id="playbook-dropdown-menu" class="dropdown-menu hidden">
-                        <div id="dropdown-playbook-list">
-                            <!-- Playbook items will be injected here -->
-                        </div>
-                        <div class="dropdown-divider"></div>
-                        <button id="dropdown-new-playbook" class="dropdown-item create-new">
-                            <span>+</span> New Playbook
-                        </button>
+                <!-- Login Form -->
+                <div id="form-login" class="auth-form-container">
+                    <h2>Welcome back</h2>
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" class="light-input" placeholder="coach@team.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" class="light-input" placeholder="••••••••">
+                    </div>
+                    <button id="btn-login" class="btn-primary full-width">Log In</button>
+
+                    <div class="auth-toggle">
+                        Don't have an account? <a href="#" id="link-to-signup">Sign up</a>
                     </div>
                 </div>
 
-                <div class="sidebar-menu hidden">
-                    <div class="menu-label">MAIN MENU</div>
-                    <button id="nav-new-play" class="menu-item">
-                        <span>+</span> New Play
-                    </button>
-                    <button id="nav-edit-formation" class="menu-item secondary">
-                        <span>⚙</span> Default Formation
-                    </button>
-                </div>
-
-                <div class="sidebar-menu hidden">
-                    <div class="menu-label">TOOLS</div>
-                    <button class="menu-item disabled">Analytics</button>
-                    <button class="menu-item disabled">Settings</button>
-                </div>
-                <div class="sidebar-footer">
-                    <div class="user-profile" id="user-profile-btn">
-                        <div class="user-avatar" id="user-avatar">HC</div>
-                        <div class="user-info">
-                            <span class="user-name" id="display-user-name">Head Coach</span>
-                            <span class="user-email" id="display-user-email">coach@team.com</span>
-                        </div>
+                <!-- Signup Form -->
+                <div id="form-signup" class="auth-form-container hidden">
+                    <h2>Create an account</h2>
+                    <div class="form-group">
+                        <label for="signup-name">Full Name</label>
+                        <input type="text" id="signup-name" class="light-input" placeholder="e.g. Coach Steve">
                     </div>
-                    <!-- Popover Menu -->
-                    <div id="user-menu" class="user-menu hidden">
-                        <button id="btn-logout" class="menu-item danger">Log Out</button>
+                    <div class="form-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" class="light-input" placeholder="coach@team.com">
                     </div>
-                </div>
-            </aside>
-
-            <!-- Main Content -->
-            <div class="main-content-area light-bg">
-                <div class="overview-header">
-                    <div class="header-title-area">
-                        <!-- Breadcrumb or Title -->
-                        <h1 id="header-playbook-name">Vikings 3/4</h1>
-                        <!-- <span class="header-subtitle">Offensive Playbook</span> -->
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" class="light-input" placeholder="Create a password">
                     </div>
-                    <div class="header-actions-right">
-                        <button id="playbook-settings-btn" class="btn-icon-dark" title="Playbook Settings">⚙</button>
-                        <button id="print-playbook-btn" class="btn-icon-dark" title="Print Playbook">🖨</button>
-                        <button id="header-new-play-btn" class="btn-dark small">+ New Play</button>
+                    <button id="btn-signup" class="btn-primary full-width">Sign Up</button>
+
+                    <div class="auth-toggle">
+                        Already have an account? <a href="#" id="link-to-login">Log in</a>
                     </div>
-                </div>
-
-                <div class="filter-bar hidden">
-                    <div class="search-wrapper">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="play-search" placeholder="Search plays...">
-                    </div>
-                    <div class="filter-actions">
-                        <select id="filter-formation" class="pill-select">
-                            <option>All Formations</option>
-                        </select>
-                        <select id="filter-tags" class="pill-select">
-                            <option>All Tags</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="plays-grid" class="plays-grid">
-                    <!-- Plays rendered here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- VIEW: Play Editor -->
-        <div id="view-play-editor" class="view-section hidden">
-            <!-- Top Bar: Navigation & Play Info -->
-            <header class="top-bar">
-                <button id="back-to-book" class="btn-ghost">← Back</button>
-                <div class="play-info">
-                    <input type="text" id="play-name" value="New Play" placeholder="Untitled Play">
-                    <h2 id="formation-editor-title" style="display:none; margin: 0; color: #fff;">Default Formation</h2>
-                </div>
-                <div class="actions">
-                    <button id="btn-play-details" class="btn-ghost" title="Play Settings"
-                        style="margin-right: 10px; font-size: 1.8rem; padding: 0 4px; line-height: 1;">
-                        ⚙
-                    </button>
-                    <button id="btn-delete-play" class="btn-ghost-danger" title="Delete Play"
-                        style="margin-right: 10px;">
-                        Delete
-                    </button>
-                    <button id="toggle-lock-btn" class="btn-primary" title="Toggle Lock">
-                        <span class="lock-text">Edit</span>
-                    </button>
-                </div>
-            </header>
-
-            <!-- Main Workspace -->
-            <div class="workspace">
-                <!-- Center: Canvas -->
-                <main class="canvas-area">
-                    <div class="canvas-wrapper">
-                        <svg id="play-canvas" width="800" height="600" viewBox="0 0 800 600"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <!-- Layers: Field, Routes, Players -->
-                            <!-- Note: Editor.js expects: field-layer, routes-layer, players-layer -->
-                            <g id="field-layer"></g>
-                            <g id="routes-layer"></g>
-                            <g id="players-layer"></g>
-                        </svg>
-                    </div>
-            </div>
-            </main>
-        </div>
-
-        <!-- Bottom Toolbar: Tools -->
-        <!-- Hidden when locked -->
-        <!-- Bottom Toolbar REMOVED -->
-
-        <!-- Properties Panel (Floating)  -->
-        <div id="properties-panel" class="properties-panel hidden">
-            <div class="panel-header">
-                <span id="prop-title">Player Edit</span>
-                <button id="finish-edit-player" class="btn-icon">✓</button>
-            </div>
-            <div class="panel-body">
-                <div class="action-row">
-                    <button id="undo-change" class="btn-small">Undo</button>
-                    <button id="delete-element" class="btn-danger-outline btn-small">Delete</button>
-                </div>
-                <label>Color:</label>
-                <div class="color-grid">
-                    <button class="color-btn" style="background: #6366f1" data-color="#6366f1"></button>
-                    <button class="color-btn" style="background: #ef4444" data-color="#ef4444"></button>
-                    <button class="color-btn" style="background: #22c55e" data-color="#22c55e"></button>
-                    <button class="color-btn" style="background: #eab308" data-color="#eab308"></button>
-                    <button class="color-btn" style="background: #ec4899" data-color="#ec4899"></button>
-                    <button class="color-btn" style="background: #06b6d4" data-color="#06b6d4"></button>
-                    <button class="color-btn" style="background: #1f2937" data-color="#1f2937"></button>
-                </div>
-            </div>
-        </div>
-
-        <!-- VIEW: Play Settings Modal -->
-        <div id="modal-play-settings" class="dark-overlay hidden">
-            <div class="modal-container settings-modal">
-                <div class="modal-header">
-                    <h2>Play Details</h2>
-                    <button id="close-play-settings" class="btn-icon-light">✕</button>
-                </div>
-                <div class="modal-body">
-                    <div class="modal-section">
-                        <h3>Play Name</h3>
-                        <div class="modal-field align-left">
-                            <input type="text" id="setting-play-name" class="light-input-bg"
-                                placeholder="Enter play name...">
-                        </div>
-                    </div>
-                    <div class="modal-section">
-                        <h3>Description</h3>
-                        <div class="modal-field align-left">
-                            <textarea id="setting-play-desc" class="light-input-bg" rows="4"
-                                placeholder="Describe the play's strategy..."></textarea>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-primary-prof" id="save-play-settings">Save Changes</button>
                 </div>
             </div>
         </div>
     </div>
 
+
+    <!-- VIEW: Playbook Overview -->
+    <div id="view-playbook-overview" class="view-section hidden"
+        style="position: absolute; top: 0; left: 0; display: flex; width: 100vw; height: 100vh; overflow: hidden; background: var(--bg-app); z-index: 10;">
+        <!-- Sidebar -->
+        <aside class="sidebar-left modern-sidebar">
+            <div class="app-brand-area">
+                <img src="images/logo.png" alt="PlayMaker Logo" class="app-logo"
+                    style="max-width: 100%; height: auto; padding: 10px;">
+            </div>
+
+            <div class="current-playbook-selector">
+                <!-- Dropdown style -->
+                <button id="switch-playbook-btn" class="playbook-dropdown-btn">
+                    <span class="dot-indicator">●</span>
+                    <span id="current-playbook-name">Vikings 3/4</span>
+                    <span class="chevron">▾</span>
+                </button>
+                <!-- Dropdown Menu -->
+                <div id="playbook-dropdown-menu" class="dropdown-menu hidden">
+                    <div id="dropdown-playbook-list">
+                        <!-- Playbook items will be injected here -->
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <button id="dropdown-new-playbook" class="dropdown-item create-new">
+                        <span>+</span> New Playbook
+                    </button>
+                </div>
+            </div>
+
+            <div class="sidebar-menu hidden">
+                <div class="menu-label">MAIN MENU</div>
+                <button id="nav-new-play" class="menu-item">
+                    <span>+</span> New Play
+                </button>
+                <button id="nav-edit-formation" class="menu-item secondary">
+                    <span>⚙</span> Default Formation
+                </button>
+            </div>
+
+            <div class="sidebar-menu hidden">
+                <div class="menu-label">TOOLS</div>
+                <button class="menu-item disabled">Analytics</button>
+                <button class="menu-item disabled">Settings</button>
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar" id="user-avatar">HC</div>
+                    <div class="user-info">
+                        <span class="user-name" id="display-user-name">Head Coach</span>
+                        <span class="user-email" id="display-user-email">coach@team.com</span>
+                    </div>
+                </div>
+                <!-- Popover Menu -->
+                <div id="user-menu" class="user-menu hidden">
+                    <button id="btn-logout" class="menu-item danger">Log Out</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content-area light-bg">
+            <div class="overview-header">
+                <div class="header-title-area">
+                    <!-- Breadcrumb or Title -->
+                    <h1 id="header-playbook-name">Vikings 3/4</h1>
+                    <!-- <span class="header-subtitle">Offensive Playbook</span> -->
+                </div>
+                <div class="header-actions-right">
+                    <button id="playbook-settings-btn" class="btn-ghost" title="Playbook Settings"
+                        style="font-size: 1.8rem; padding: 0 4px; line-height: 1; border: 1px solid transparent; background: transparent;">⚙</button>
+                    <button id="print-playbook-btn" class="btn-ghost" title="Print Playbook"
+                        style="padding: 0 6px; border: 1px solid transparent; background: transparent;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2">
+                            </path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                    </button>
+                    <button id="header-new-play-btn" class="btn-dark small">+ New Play</button>
+                </div>
+            </div>
+
+            <div class="filter-bar hidden">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="play-search" placeholder="Search plays...">
+                </div>
+                <div class="filter-actions">
+                    <select id="filter-formation" class="pill-select">
+                        <option>All Formations</option>
+                    </select>
+                    <select id="filter-tags" class="pill-select">
+                        <option>All Tags</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="plays-grid" class="plays-grid">
+                <!-- Plays rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: Play Editor -->
+    <div id="view-play-editor" class="view-section hidden">
+        <!-- Top Bar: Navigation & Play Info -->
+        <header class="top-bar">
+            <button id="back-to-book" class="btn-ghost">← Back</button>
+            <div class="play-info">
+                <input type="text" id="play-name" value="New Play" placeholder="Untitled Play">
+                <h2 id="formation-editor-title" style="display:none; margin: 0; color: #fff;">Default Formation</h2>
+            </div>
+            <div class="actions">
+                <button id="btn-play-details" class="btn-ghost" title="Play Settings"
+                    style="margin-right: 10px; font-size: 1.8rem; padding: 0 4px; line-height: 1;">
+                    ⚙
+                </button>
+                <button id="btn-delete-play" class="btn-danger-outline" style="margin-right: 10px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                        </path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                    Delete
+                </button>
+                <button id="toggle-lock-btn" class="btn-primary" title="Toggle Lock">
+                    <span class="lock-text">Edit</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="workspace-flex"
+            style="display: flex !important; flex-direction: row !important; flex: 1 !important; height: calc(100vh - 60px); overflow: hidden; position: relative;">
+            <!-- Center: Canvas -->
+            <main class="canvas-area-expanded"
+                style="flex: 1; background: #f1f5f9; overflow: auto; display: flex; align-items: center; justify-content: center;">
+                <div class="canvas-wrapper">
+                    <svg id="play-canvas" width="1000" height="700" viewBox="0 0 1000 700"
+                        xmlns="http://www.w3.org/2000/svg"
+                        style="background: white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                        <!-- Layers: Field, Routes, Players -->
+                        <g id="field-layer"></g>
+                        <g id="routes-layer"></g>
+                        <g id="players-layer"></g>
+                    </svg>
+                </div>
+            </main>
+
+            <!-- Right Sidebar: Properties -->
+            <aside id="editor-sidebar-right" class="editor-sidebar hidden"
+                style="width: 300px !important; min-width: 300px !important; max-width: 300px !important; background: white; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow-y: auto; padding: 1rem; gap: 1.5rem; flex-shrink: 0 !important;">
+                <!-- Header -->
+                <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Edit Player</h3>
+                    <button id="close-sidebar" class="btn-icon-light" style="cursor: pointer;">✕</button>
+                </div>
+
+                <!-- Player Profile (Preview + Label) -->
+                <div class="player-profile-section"
+                    style="display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1.5rem;">
+                    <!-- Preview Circle -->
+                    <div id="prop-player-preview"
+                        style="width: 48px; height: 48px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem; flex-shrink: 0; border: 2px solid var(--text-main);">
+                        P
+                    </div>
+                    <!-- Input Column -->
+                    <div style="display: flex; flex-direction: column;">
+                        <label style="font-size: 0.8rem; color: #64748b; margin-bottom: 2px;">Label</label>
+                        <input type="text" id="prop-player-label" class="minimal-input" placeholder="--" maxlength="2"
+                            style="font-size: 1.1rem; font-weight: 600; border: none; border-bottom: 2px solid #e2e8f0; padding: 2px 0; width: 60px; outline: none; color: #0f172a; background: transparent;">
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="sidebar-section">
+                    <label style="margin-bottom: 0.75rem; display: block;">Actions</label>
+                    <div class="action-buttons-row">
+                        <button id="undo-change" class="btn-secondary-outline full-width">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 14L4 9l5-5" />
+                                <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11" />
+                            </svg>
+                            Undo
+                        </button>
+                        <button id="delete-element" class="btn-danger-outline full-width">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path
+                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                                </path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Colors -->
+                <div class="sidebar-section">
+                    <label>Player Color</label>
+                    <div class="color-grid-large"
+                        style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem;">
+                        <button class="color-btn-lg" style="background: #ef4444" data-color="#ef4444"></button>
+                        <button class="color-btn-lg" style="background: #f97316" data-color="#f97316"></button>
+                        <button class="color-btn-lg" style="background: #eab308" data-color="#eab308"></button>
+                        <button class="color-btn-lg" style="background: #22c55e" data-color="#22c55e"></button>
+                        <button class="color-btn-lg" style="background: #3b82f6" data-color="#3b82f6"></button>
+                        <button class="color-btn-lg" style="background: #a855f7" data-color="#a855f7"></button>
+                        <button class="color-btn-lg" style="background: #ec4899" data-color="#ec4899"></button>
+                        <button class="color-btn-lg" style="background: #000000" data-color="#000000"></button>
+                    </div>
+                </div>
+
+                <!-- Route End Style -->
+                <div class="sidebar-section">
+                    <label>Route End</label>
+                    <div class="segmented-control">
+                        <button class="segment-btn active" data-end="arrow" id="route-end-arrow">
+                            → Arrow
+                        </button>
+                        <button class="segment-btn" data-end="circle" id="route-end-circle">
+                            ○ Circle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Route Segments Style -->
+                <div class="sidebar-section">
+                    <label>Route Styles</label>
+                    <div id="route-segments-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <!-- Dynamic Segments -->
+                    </div>
+                </div>
+        </div>
+        </aside>
+    </div>
+    </div>
+
+    <!-- VIEW: Play Settings Modal -->
+    <div id="modal-play-settings" class="dark-overlay hidden">
+        <div class="modal-container settings-modal">
+            <div class="modal-header">
+                <h2>Play Details</h2>
+                <button id="close-play-settings" class="btn-icon-light">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <h3>Play Name</h3>
+                    <div class="modal-field align-left">
+                        <input type="text" id="setting-play-name" class="light-input-bg"
+                            placeholder="Enter play name...">
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <h3>Description</h3>
+                    <div class="modal-field align-left">
+                        <textarea id="setting-play-desc" class="light-input-bg" rows="4"
+                            placeholder="Describe the play's strategy..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary-prof" id="save-play-settings">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
     <!-- Snackbar for notifications -->
     <div id="snackbar" class="snackbar hidden">Click edit to start making edits</div>
-    <script type="module" src="js/formations.js?v=12"></script>
-    <script type="module" src="js/store.js?v=12"></script>
-    <script type="module" src="js/editor.js?v=12"></script>
-    <script type="module" src="js/ui.js?v=12"></script>
-    <script type="module" src="js/app.js?v=12"></script>
+    <script type="module" src="js/formations.js?v=15"></script>
+    <script type="module" src="js/store.js?v=15"></script>
+    <script type="module" src="js/editor.js?v=15"></script>
+    <script type="module" src="js/ui.js?v=15"></script>
+    <script type="module" src="js/app.js?v=15"></script>
 </body>
 
 </html>
