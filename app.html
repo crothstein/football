@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PlayMaker - Flag Football Designer</title>
-    <link rel="stylesheet" href="css/style_v17.css">
+    <link rel="stylesheet" href="css/style_v17.css?v=20">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -163,24 +163,18 @@
                     </div>
 
                     <div class="modal-field">
-                        <label>PLAYERS PER SIDE</label>
+                        <label>GAME FORMAT</label>
                         <div class="team-size-selector" id="team-size-selector">
-                            <!-- Buttons 4-9 -->
-                            <button class="size-btn" data-value="4">4</button>
-                            <button class="size-btn active" data-value="5">5</button>
-                            <button class="size-btn" data-value="6">6</button>
-                            <button class="size-btn" data-value="7">7</button>
-                            <button class="size-btn" data-value="8">8</button>
-                            <button class="size-btn" data-value="9">9</button>
+                            <button class="size-btn active" data-value="5">5v5</button>
+                            <button class="size-btn" data-value="6">6v6</button>
+                            <button class="size-btn" data-value="7">7v7</button>
                         </div>
                         <input type="hidden" id="selected-team-size" value="5">
                     </div>
 
-                    <div class="modal-field">
-                        <label>FIELD LINES</label>
-                        <div class="field-preview-box">
-                            <!-- Placeholder for field preview -->
-                        </div>
+                    <!-- Hidden for Logic Safety -->
+                    <div class="modal-field" style="display:none;">
+                        <div class="field-preview-box"></div>
                     </div>
                 </div>
                 <!-- Hidden select for back-compat logic until we refactor logic fully -->
@@ -205,7 +199,7 @@
                     <div class="modal-section">
                         <h3>Playbook Name</h3>
                         <div class="modal-field align-left">
-                            <input type="text" id="settings-playbook-name" class="light-input-bg"
+                            <input type="text" id="settings-playbook-name" class="dark-input"
                                 placeholder="Enter name...">
                         </div>
                     </div>
@@ -240,12 +234,13 @@
                         Delete Playbook
                     </button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button id="close-settings-btn" class="btn-outline-prof">Close</button>
-                <button id="save-settings-btn" class="btn-primary-prof">
-                    Save Changes
-                </button>
+
+                <div class="modal-footer">
+                    <button id="close-settings-btn" class="btn-outline-prof">Close</button>
+                    <button id="save-settings-btn" class="btn-primary-prof">
+                        Save Changes
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -422,17 +417,7 @@
                     style="margin-right: 10px; font-size: 1.8rem; padding: 0 4px; line-height: 1;">
                     ⚙
                 </button>
-                <button id="btn-delete-play" class="btn-danger-outline" style="margin-right: 10px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
-                        </path>
-                        <line x1="10" y1="11" x2="10" y2="17"></line>
-                        <line x1="14" y1="11" x2="14" y2="17"></line>
-                    </svg>
-                    Delete
-                </button>
+
                 <button id="toggle-lock-btn" class="btn-primary" title="Toggle Lock">
                     <span class="lock-text">Edit</span>
                 </button>
@@ -594,6 +579,19 @@
                     <div class="modal-field align-left">
                         <textarea id="setting-play-desc" class="light-input-bg" rows="4"
                             placeholder="Describe the play's strategy..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <h3>Actions</h3>
+                    <div class="action-buttons-row">
+                        <button id="btn-copy-play" class="btn-secondary-outline full-width">
+                            Duplicate Play
+                        </button>
+                    </div>
+                    <div class="action-buttons-row" style="margin-top: 10px;">
+                        <button id="btn-delete-play" class="btn-danger-block full-width">
+                            Delete Play
+                        </button>
                     </div>
                 </div>
             </div>

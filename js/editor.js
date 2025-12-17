@@ -704,6 +704,11 @@ export class Editor {
             text.textContent = cleanLabel;
         }
 
+        // FIX: Update dataset so getData() reads the correct value
+        if (this.selectedPlayer.element) {
+            this.selectedPlayer.element.dataset.label = cleanLabel;
+        }
+
         // Trigger UI update (to sync preview circle if needed)
         // this.app.ui.updateSidebar(this.selectedPlayer); // Might cause loop if updating input?
         // Instead, just update the preview circle directly via UI method if exists?

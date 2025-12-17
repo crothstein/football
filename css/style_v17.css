@@ -446,11 +446,10 @@ body {
 
 /* Dark Overlay for Create View */
 .dark-overlay {
-    background-color: rgba(31, 41, 55, 0.75);
-    /* Semi-transparent Slate 900 */
-    backdrop-filter: blur(4px);
+    background-color: rgba(15, 23, 42, 0.4);
+    /* Slate 900, lower opacity */
+    backdrop-filter: blur(2px);
     /* Optional: adds nice blur effect */
-    /* Dark slate */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -463,12 +462,18 @@ body {
 }
 
 .modal-container {
-    width: 600px;
-    background: transparent;
+    width: 500px;
+    background: #ffffff;
+    /* White */
+    border: 1px solid #e2e8f0;
+    /* Slate 200 */
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    color: white;
+    color: var(--text-main);
+    padding: 2rem;
 }
 
 .modal-header {
@@ -476,7 +481,16 @@ body {
     justify-content: space-between;
     align-items: center;
     padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    margin-top: auto;
 }
 
 .modal-header h2 {
@@ -487,8 +501,8 @@ body {
 
 .btn-icon-light {
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
+    border: 1px solid #e2e8f0;
+    color: var(--text-muted);
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -501,8 +515,9 @@ body {
 }
 
 .btn-icon-light:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: white;
+    background: #f1f5f9;
+    color: var(--text-main);
+    border-color: #cbd5e1;
 }
 
 /** Success Checkmark Button **/
@@ -543,14 +558,14 @@ body {
     font-size: 0.85rem;
     font-weight: 700;
     letter-spacing: 0.05em;
-    color: white;
+    color: var(--text-muted);
     text-transform: uppercase;
 }
 
 .dark-input {
-    background: #334155;
-    border: 1px solid #475569;
-    color: white;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: var(--text-main);
     padding: 0.75rem 1rem;
     border-radius: 6px;
     width: 100%;
@@ -562,28 +577,38 @@ body {
 
 .dark-input:focus {
     border-color: var(--primary);
-    background: #1e293b;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.dark-input::placeholder {
+    color: #94a3b8;
 }
 
 /* Team Size Selector (Buttons) */
 .team-size-selector {
     display: flex;
-    background: #334155;
-    border-radius: 4px;
+    background: #f1f5f9;
+    /* Light slate bg */
+    border-radius: 6px;
     /* Slight rounded or sharp as per mock */
-    padding: 0;
+    padding: 4px;
+    /* Added padding for pill grouping look */
     overflow: hidden;
+    gap: 4px;
 }
 
 .size-btn {
     border: none;
     background: transparent;
-    color: white;
-    padding: 0.75rem 1.25rem;
+    color: var(--text-muted);
+    padding: 0.5rem 1.25rem;
     cursor: pointer;
     font-weight: 600;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    transition: background 0.2s;
+    border-radius: 4px;
+    /* Individual rounded buttons */
+    border-right: none;
+    /* Remove separator lines */
+    transition: all 0.2s;
 }
 
 .size-btn:last-child {
@@ -591,12 +616,15 @@ body {
 }
 
 .size-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: white;
+    color: var(--text-main);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .size-btn.active {
-    background: rgba(255, 255, 255, 0.2);
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+    background: white;
+    color: var(--primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .field-preview-box {
@@ -1378,6 +1406,41 @@ body {
     font-weight: 600;
     color: var(--text-main);
     margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-primary-prof {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary-prof:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.btn-outline-prof {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid #cbd5e1;
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-outline-prof:hover {
+    background: #f1f5f9;
+    color: var(--text-main);
+    border-color: #94a3b8;
 }
 
 .settings-modal label.text-dark {
@@ -1974,6 +2037,7 @@ body {
 .hidden {
     display: none !important;
 }
+
 /* Active State for Primary Button */
 #make-primary-btn.active {
     color: #EAB308 !important;

@@ -368,6 +368,20 @@ class App {
             });
         }
 
+        const copyPlayBtn = document.getElementById('btn-copy-play');
+        if (copyPlayBtn) {
+            copyPlayBtn.addEventListener('click', async () => {
+                if (!this.currentPlay || !this.currentPlaybook) return;
+
+                if (this.checkUnsavedChanges()) {
+                    // Ensure current state is saved first? Or copy from editor?
+                    // Safer to copy from editor data to capture unsaved tweaks
+                    const data = this.editor.getData();
+                    this.handleCopyPlay(data);
+                }
+            });
+        }
+
         if (toggleLockBtn) {
             toggleLockBtn.addEventListener('click', () => {
                 // const lockIcon = toggleLockBtn.querySelector('.lock-icon'); // Removed
@@ -653,7 +667,7 @@ class App {
 
         // Ensure Delete Button is visible
         const deletePlayBtn = document.getElementById('btn-delete-play');
-        if (deletePlayBtn) deletePlayBtn.style.display = 'inline-block';
+        // if (deletePlayBtn) deletePlayBtn.style.display = 'inline-block'; // No longer needed in header
 
         // Load into editor
         this.editor.loadData(play);
@@ -704,6 +718,41 @@ class App {
             console.log('Play saved', this.currentPlay);
         } catch (err) {
             console.error('Error saving play:', err);
+        }
+    }
+
+    async handleCopyPlay(sourceData) {
+        if (!this.currentPlaybook) return;
+
+        // Calculate next order index
+        const currentPlays = this.currentPlaybook.plays || [];
+        const maxOrder = currentPlays.reduce((max, p) => Math.max(max, p.order || 0), -1);
+
+        const newPlay = {
+            name: (this.currentPlay.name || 'Untitled') + ' Copy',
+            formation: this.currentPlay.formation || 'Custom',
+            players: JSON.parse(JSON.stringify(sourceData.players)), // Deep copy
+            routes: JSON.parse(JSON.stringify(sourceData.routes)),   // Deep copy
+            order: maxOrder + 1
+        };
+
+        try {
+            const savedPlay = await this.store.savePlay(this.currentPlaybook.id, newPlay);
+
+            // Refresh local playbook
+            this.currentPlaybook = await this.store.getPlaybook(this.currentPlaybook.id);
+
+            // Switch to the new play
+            this.openPlay(savedPlay.id);
+
+            // Notify user
+            this.ui.showSnackbar("Play copied to end of playbook");
+
+            // Close settings modal if open
+            if (this.ui.playSettingsModal) this.ui.hideModal(this.ui.playSettingsModal);
+
+        } catch (err) {
+            alert('Error copying play: ' + err.message);
         }
     }
 }
