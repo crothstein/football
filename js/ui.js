@@ -132,6 +132,22 @@ export class UI {
             });
         });
 
+        // Route Cuts (Hard/Rounded)
+        const cutBtns = document.querySelectorAll('.segment-btn[data-cut]');
+        cutBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.target.closest('.segment-btn');
+                if (!target) return;
+
+                // Visual update
+                cutBtns.forEach(b => b.classList.remove('active'));
+                target.classList.add('active');
+
+                const type = target.dataset.cut;
+                if (this.app.editor) this.app.editor.updateRouteCutType(type);
+            });
+        });
+
         // ... Existing Listeners ...
         // Team Size Change (Delegation)
         if (this.teamSizeSelector) {
@@ -742,133 +758,152 @@ export class UI {
     updateSidebar(player) {
         if (!this.sidebar) return;
 
-        if (this.sidebar) {
-            this.sidebar.classList.remove('hidden');
-        }
+        // OPEN SIDEBAR (Fixes "doesn't even open" issue)
+        this.sidebar.classList.remove('hidden');
 
-        // Show Content, Hide Empty
+        this._restoreSidebarSections();
+
+        // Show Content, Hide Empty (Missing logic restored)
         const emptyState = document.getElementById('sidebar-empty-state');
         const content = document.getElementById('sidebar-content');
         if (emptyState) emptyState.classList.add('hidden');
         if (content) content.classList.remove('hidden');
 
-        // Update Circle Preview
-        if (this.propPlayerPreview) {
-            this.propPlayerPreview.textContent = player.label || ''; // Show label inside
-            this.propPlayerPreview.style.backgroundColor = player.color || '#3b82f6';
+        // RE-QUERY ELEMENTS to ensure we have fresh references (fixes "blank sidebar" issue)
+        const header = this.sidebar.querySelector('.sidebar-header h2');
+        const preview = document.getElementById('prop-player-preview');
+        const labelInput = document.getElementById('prop-player-label');
+        const makePrimaryBtn = document.getElementById('make-primary-btn'); // FIX: ID was 'btn-make-primary' in js but 'make-primary-btn' in html
+        const colorBtns = document.querySelectorAll('.color-btn-lg');
+        const cutBtns = document.querySelectorAll('[data-cut]');
+        const endBtns = document.querySelectorAll('[data-end]');
+        const routeContainer = document.getElementById('route-segments-container');
+
+        // Update Header
+        if (header) header.textContent = 'EDIT PLAYER';
+
+        // Update Preview Circle
+        if (preview) {
+            preview.textContent = player.label || '';
+            const pColor = player.color || '#3b82f6';
+            preview.style.backgroundColor = pColor; // Always filled
+            preview.style.display = 'flex';
+            preview.style.justifyContent = 'center';
+            preview.style.alignItems = 'center';
+            preview.style.color = '#fff';
+
+            // Always apply a standard white border, regardless of primary status
+            preview.style.border = '2px solid white';
         }
 
         // Update Label Input
-        if (this.propPlayerLabelInput) {
-            this.propPlayerLabelInput.value = player.label || '';
+        if (labelInput) {
+            labelInput.value = player.label || '';
         }
 
-        // Update Primary Button
-        const primaryBtn = document.getElementById('make-primary-btn');
-        if (primaryBtn) {
+        // Update Primary Button State
+        if (makePrimaryBtn) {
             if (player.isPrimary) {
-                primaryBtn.classList.add('active');
-                // Force styles to ensure visibility
-                primaryBtn.style.color = '#EAB308';
-                primaryBtn.style.borderColor = '#EAB308';
-                primaryBtn.style.backgroundColor = '#FEF9C3';
+                makePrimaryBtn.classList.add('active');
+                // FIX: Do NOT change InnerHTML to text, keep icon only.
+                // If we want to indicate state, maybe change color (handled by CSS .active)
             } else {
-                primaryBtn.classList.remove('active');
-                primaryBtn.style.color = '';
-                primaryBtn.style.borderColor = '';
-                primaryBtn.style.backgroundColor = '';
+                makePrimaryBtn.classList.remove('active');
             }
         }
 
         // Update Active Color Logic
-        const colorBtns = document.querySelectorAll('.color-btn-lg');
-        colorBtns.forEach(btn => {
-            if (btn.dataset.color === player.color) {
-                btn.classList.add('active');
-            } else {
+        if (colorBtns) {
+            colorBtns.forEach(btn => {
+                const pColor = (player.color || '').toLowerCase();
+                const bColor = (btn.dataset.color || '').toLowerCase();
+                if (bColor === pColor) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // Update Route Cuts
+        if (cutBtns) {
+            cutBtns.forEach(btn => {
+                if (btn.dataset.cut === (player.routeCutType || 'hard')) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // Update Route End
+        if (endBtns) {
+            const currentEnd = player.routeEndType || 'arrow';
+            endBtns.forEach(btn => {
+                // Remove active from all first (safer)
                 btn.classList.remove('active');
-            }
-        });
+                if (btn.dataset.end === currentEnd) {
+                    btn.classList.add('active');
+                }
+            });
+        }
 
-        // Update End Type Selection
-        const endBtns = document.querySelectorAll('.segment-btn[data-end]');
-        endBtns.forEach(btn => {
-            if (btn.dataset.end === (player.routeEndType || 'arrow')) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-
-        // Dynamic Route Segments
-        const container = document.getElementById('route-segments-container');
-        if (container) {
-            container.innerHTML = '';
-
+        // Update Route Segments List
+        if (routeContainer) {
+            routeContainer.innerHTML = '';
             const numSegments = (player.route || []).length;
             const styles = player.routeStyles || [];
 
-            if (numSegments === 0) {
-                const msg = document.createElement('div');
-                msg.textContent = 'Click on field to add route segments';
-                msg.style.color = '#9ca3af';
-                msg.style.fontSize = '0.85rem';
-                msg.style.textAlign = 'center';
-                container.appendChild(msg);
-            }
+            if (numSegments > 0) {
+                for (let i = 0; i < numSegments; i++) {
+                    const style = styles[i] || 'solid';
+                    const row = document.createElement('div');
+                    row.style.marginBottom = '0.5rem';
 
-            for (let i = 0; i < numSegments; i++) {
-                const row = document.createElement('div');
-                row.style.marginBottom = '0.5rem';
+                    const header = document.createElement('div');
+                    header.textContent = `Segment ${i + 1}`;
+                    header.style.fontSize = '0.8rem';
+                    header.style.marginBottom = '0.2rem';
+                    header.style.color = '#64748b';
+                    row.appendChild(header);
 
-                const header = document.createElement('div');
-                header.textContent = `Segment ${i + 1}`;
-                header.style.fontSize = '0.8rem';
-                header.style.marginBottom = '0.2rem';
-                header.style.color = '#64748b';
-                row.appendChild(header);
+                    const control = document.createElement('div');
+                    control.className = 'segmented-control small';
 
-                const control = document.createElement('div');
-                control.className = 'segmented-control';
-
-                const currentStyle = styles[i] || 'solid';
-
-                // Helper to create buttons
-                const createBtn = (style, label, iconClass) => {
-                    const btn = document.createElement('button');
-                    btn.className = `segment-btn ${currentStyle === style ? 'active' : ''}`;
-
-                    if (iconClass) {
-                        btn.innerHTML = `<div class="${iconClass}"></div>`;
-                    } else if (style === 'squiggly') {
-                        // Quick custom SVG for wave
-                        btn.innerHTML = `
+                    // Simple logic to create buttons
+                    const createBtn = (sVal, label, klass) => {
+                        const btn = document.createElement('button');
+                        btn.className = `segment-btn ${style === sVal ? 'active' : ''}`;
+                        if (klass) {
+                            btn.innerHTML = `<div class="${klass}"></div>`;
+                        } else if (sVal === 'squiggly') {
+                            // FIX: Restore SVG for Squiggly
+                            btn.innerHTML = `
                             <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M2 6c2.5-5 5-5 7.5 0s5 5 7.5 0 5-5 7.5 0" />
                             </svg>
                          `;
-                    }
-
-                    btn.onclick = () => {
-                        this.app.editor.updateRouteStyle(i, style);
-                        // Update UI loop? Or relies on full re-render?
-                        // Simple active switch:
-                        Array.from(control.children).forEach(c => c.classList.remove('active'));
-                        btn.classList.add('active');
+                        } else {
+                            btn.textContent = label;
+                        }
+                        btn.onclick = () => {
+                            this.app.editor.updateRouteStyle(i, sVal);
+                            // Optimistic update
+                            Array.from(control.children).forEach(c => c.classList.remove('active'));
+                            btn.classList.add('active');
+                        };
+                        return btn;
                     };
-                    return btn;
-                };
 
-                const btnSolid = createBtn('solid', '', 'line-solid');
-                const btnDashed = createBtn('dashed', '', 'line-dashed');
-                const btnSquiggly = createBtn('squiggly', '', null);
+                    control.appendChild(createBtn('solid', 'Solid', 'line-solid'));
+                    control.appendChild(createBtn('dashed', 'Dashed', 'line-dashed'));
+                    control.appendChild(createBtn('squiggly', 'Z', null));
 
-                control.appendChild(btnSolid);
-                control.appendChild(btnDashed);
-                control.appendChild(btnSquiggly);
-
-                row.appendChild(control);
-                container.appendChild(row);
+                    row.appendChild(control);
+                    routeContainer.appendChild(row);
+                }
+            } else {
+                routeContainer.innerHTML = '<span style="color:#9ca3af; font-size:0.85rem; font-style:italic;">No route segments yet. Click field to add.</span>';
             }
         }
     }
@@ -898,6 +933,9 @@ export class UI {
         const content = document.getElementById('sidebar-content');
         if (emptyState) emptyState.classList.remove('hidden');
         if (content) content.classList.add('hidden');
+
+        // Ensure menu is visible if in editor
+        this.showFloatingMenu();
     }
 
     savePlaySettings() {
@@ -931,4 +969,143 @@ export class UI {
     hideModal(modal) {
         if (modal) modal.classList.add('hidden');
     }
+
+    showFloatingMenu() {
+        let menu = document.getElementById('floating-icon-menu');
+        if (!menu) {
+            // Create it if missing
+            const canvasWrapper = document.querySelector('.canvas-wrapper');
+            if (canvasWrapper) {
+                menu = document.createElement('div');
+                menu.id = 'floating-icon-menu';
+                menu.style.position = 'absolute';
+                menu.style.bottom = '-60px'; // Outside canvas (below)
+                menu.style.left = '50%';
+                menu.style.transform = 'translateX(-50%)';
+                menu.style.display = 'flex';
+                menu.style.gap = '16px'; // More spacing
+                menu.style.padding = '8px 16px';
+                menu.style.background = 'white';
+                menu.style.borderRadius = '20px';
+                menu.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)';
+                menu.style.zIndex = '100';
+
+                // Helper to create buttons
+                const createBtn = (type, img) => {
+                    const btn = document.createElement('button');
+                    // Display size in menu can be slightly larger for clickability
+                    btn.innerHTML = `<img src="${img}" style="width:40px;height:40px; pointer-events:none;">`;
+                    btn.title = `Add ${type === 'football' ? 'Football' : 'Fake Football'}`;
+                    btn.className = 'btn-icon-light';
+                    btn.style.border = 'none';
+                    btn.style.background = 'transparent';
+                    btn.style.cursor = 'grab';
+
+                    // Drag from menu logic
+                    btn.onmousedown = (e) => {
+                        e.preventDefault(); // Prevent text selection/native drag
+                        if (this.app.editor) this.app.editor.startDragNewIcon(type, e);
+                    };
+
+                    // Keep click just in case (optional, but requested drag-only mostly)
+                    // If we only want drag, we skip click. 
+                    // But maybe user just clicks? Let's support click = place in center too?
+                    // "Rather than having it so you click it... could we make it so you can click and drag"
+                    // implies REPLACING click-to-center with drag.
+                    // But click-to-center is a good fallback. 
+                    // However, simultaneous onclick and onmousedown can be tricky.
+                    // Let's rely on mousedown -> editor handles "drag or click".
+
+                    return btn;
+                };
+
+                menu.appendChild(createBtn('football', 'images/football.png'));
+                menu.appendChild(createBtn('fake', 'images/fake_football.png'));
+
+                canvasWrapper.appendChild(menu);
+                // Ensure canvas-wrapper has relative positioning
+                canvasWrapper.style.position = 'relative';
+            }
+        }
+        if (menu) menu.classList.remove('hidden');
+    }
+
+    updateSidebarForIcon(type) {
+        if (!this.sidebar) return;
+        this.sidebar.classList.remove('hidden');
+
+        const emptyState = document.getElementById('sidebar-empty-state');
+        const content = document.getElementById('sidebar-content');
+        if (emptyState) emptyState.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+
+        // Hide Player-Specific Sections
+        // We need to identify sections. Best way is to iterate and hide all, then show what we need?
+        // Or specific targeting.
+
+        // Let's assume structure:
+        // Header (Edit Player -> Edit Icon)
+        // Player Profile (.player-profile-section) -> HIDE
+        // Actions (.sidebar-section) -> SHOW
+        // Colors/Routes (.sidebar-section) -> HIDE
+
+        // Titles
+        const headerTitle = this.sidebar.querySelector('.sidebar-header h3');
+        if (headerTitle) headerTitle.textContent = type === 'football' ? 'Football' : 'Fake Football';
+
+        // Player Profile
+        const profile = this.sidebar.querySelector('.player-profile-section');
+        if (profile) profile.style.display = 'none';
+
+        // Hide other sections (Color, Route End, Route Cuts, Route Styles)
+        // They are all .sidebar-section. The Actions one is also .sidebar-section but distinct?
+        // Let's filter by content? Or add IDs in HTML?
+        // HTML has: Actions (with Undo/Delete), Colors, Route End, Route Cuts, Route Styles.
+        // It's brittle to guess order.
+
+        const sections = this.sidebar.querySelectorAll('.sidebar-section');
+        sections.forEach(sec => {
+            // Check if it contains Delete button, if so Keep it.
+            if (sec.querySelector('#delete-element')) {
+                sec.style.display = 'block';
+                // Hide Undo button inside if not needed? 
+                // User only asked for "The only option should be to delete".
+                const undo = sec.querySelector('#undo-change');
+                if (undo) undo.style.display = 'none';
+            } else {
+                sec.style.display = 'none';
+            }
+        });
+    }
+
+    // Helper to restore sidebar state when switching back to player
+    _restoreSidebarSections() {
+        const headerTitle = this.sidebar.querySelector('.sidebar-header h3');
+        if (headerTitle) headerTitle.textContent = 'Edit Player';
+
+        const profile = this.sidebar.querySelector('.player-profile-section');
+        // FIX: restoring to 'flex' because that was the original display, assuming it was hidden with 'none'.
+        // Also ensure preview elements inside are visible/reset if needed.
+        if (profile) profile.style.display = 'flex';
+
+        // Restore Preview Circle Styles explicitly
+        if (this.propPlayerPreview) {
+            this.propPlayerPreview.style.border = ''; // Reset to default (stylesheet) or '2px solid white' if inline
+            // If stylesheet handles it, empty string works. If inline was used, we need to know what it was.
+            // Looking at CSS, .color-btn (if used) has border. 
+            // But propPlayerPreview is likely custom.
+            // Let's assume resetting to empty string removes the 'none' we might have added,
+            // allowing CSS to take over.
+            this.propPlayerPreview.style.display = '';
+        }
+
+        const sections = this.sidebar.querySelectorAll('.sidebar-section');
+        sections.forEach(sec => {
+            sec.style.display = 'block';
+            const undo = sec.querySelector('#undo-change');
+            if (undo) undo.style.display = 'inline-flex'; // or block/flex
+        });
+    }
+
+
 }

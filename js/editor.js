@@ -2,7 +2,9 @@ export class Editor {
     constructor(canvasId) {
         this.svg = document.getElementById(canvasId);
         this.playersLayer = document.getElementById('players-layer');
+        this.playersLayer = document.getElementById('players-layer');
         this.routesLayer = document.getElementById('routes-layer');
+        this.iconsLayer = document.getElementById('icons-layer');
 
         this.isLocked = true;
         this.selectedPlayer = null;
@@ -25,6 +27,10 @@ export class Editor {
 
         this.ui = null; // Will be injected
         this.mode = 'play'; // 'play' | 'formation'
+    }
+
+    setApp(appInstance) {
+        this.app = appInstance;
     }
 
     setUI(uiInstance) {
@@ -133,10 +139,14 @@ export class Editor {
                 }
             });
         }
+        if (play.icons) {
+            play.icons.forEach(icon => this.renderIcon(icon));
+        }
     }
 
     getData() {
         // Collect players from DOM to ensure positions are current
+        // Collect players and icons
         const players = [];
         Array.from(this.playersLayer.children).forEach(g => {
             // FIX: Ignore invisible hit-area when reading visual properties
@@ -157,7 +167,15 @@ export class Editor {
             if (isNaN(x)) x = (circle ? parseFloat(circle.getAttribute('cx')) : (text ? parseFloat(text.getAttribute('x')) : 0)) || 0;
             if (isNaN(y)) y = (circle ? parseFloat(circle.getAttribute('cy')) : (text ? parseFloat(text.getAttribute('y')) : 0)) || 0;
             if (!color) color = (circle ? circle.getAttribute('fill') : (polygon ? polygon.getAttribute('fill') : null)) || '#1f2937';
-            if (label === undefined) label = text ? text.textContent : '';
+
+            // ROBUST LABEL: If dataset is empty but text exists, prefer text
+            const txtContent = text ? text.textContent.trim() : '';
+            if ((label === undefined || label === '') && txtContent) {
+                label = txtContent;
+            } else if (label === undefined) {
+                label = txtContent;
+            }
+
             // If dataset.isPrimary is missing, check DOM structure
             if (g.dataset.isPrimary === undefined) isPrimary = g.querySelector('polygon') !== null;
             // Verify/Restore Route Parsing
@@ -168,25 +186,51 @@ export class Editor {
 
             if (routeGroup) {
                 routeEndType = routeGroup.dataset.endType || 'arrow';
+                const cutType = routeGroup.dataset.cutType || 'hard'; // Read cut type
+
                 // Legacy polyline check
                 if (routeGroup.tagName.toLowerCase() === 'polyline') {
                     // Skip legacy
                 } else {
                     // It's a Group of lines or paths
-                    const children = Array.from(routeGroup.children);
+                    let children = Array.from(routeGroup.children);
+
+                    // SMART FILTER: 
+                    // 1. If we have elements with explicit 'data-index', trust them (and sort them).
+                    // 2. If NO elements have 'data-index' (legacy or old session), take all valid lines/paths in DOM order.
+
+                    const hasIndices = children.some(el => el.dataset.index !== undefined);
+
+                    if (hasIndices) {
+                        children = children.filter(el => el.dataset.index !== undefined);
+                        children.sort((a, b) => parseInt(a.dataset.index) - parseInt(b.dataset.index));
+                    } else {
+                        // Fallback: Filter out known junk (defs, hit-area if any inside group?)
+                        // Usually route group only has segments.
+                        children = children.filter(el => {
+                            const t = el.tagName.toLowerCase();
+                            return t === 'line' || t === 'path';
+                        });
+                    }
+
                     children.forEach(el => {
                         let rx, ry, style;
-                        if (el.tagName === 'line') {
+                        const tagName = el.tagName.toLowerCase();
+                        if (tagName === 'line') {
                             rx = parseFloat(el.getAttribute('x2'));
                             ry = parseFloat(el.getAttribute('y2'));
                             style = el.dataset.style || 'solid';
-                        } else if (el.tagName === 'path') {
+                        } else if (tagName === 'path') {
                             const d = el.getAttribute('d');
                             if (d) {
                                 const parts = d.split(' ');
-                                rx = parseFloat(parts[parts.length - 2]);
-                                ry = parseFloat(parts[parts.length - 1]);
-                                style = el.dataset.style || 'control';
+                                // Ensure we get last 2 parts which should be coords
+                                if (parts.length >= 2) {
+                                    rx = parseFloat(parts[parts.length - 2]);
+                                    ry = parseFloat(parts[parts.length - 1]);
+                                }
+                                style = el.dataset.style || 'control'; // Should be saved now
+                                if (style === 'control' && el.getAttribute('stroke-dasharray')) style = 'dashed';
                             }
                         }
 
@@ -199,6 +243,7 @@ export class Editor {
             }
             players.push({
                 id: id,
+                routeId: 'r_' + id, // FIX: Ensure routeId is present
                 type: 'offense',
                 x: x,
                 y: y,
@@ -207,11 +252,24 @@ export class Editor {
                 route: routePoints,
                 routeStyles: routeStyles,
                 routeEndType: routeEndType,
+                routeCutType: routeGroup ? (routeGroup.dataset.cutType || 'hard') : 'hard',
                 isPrimary: isPrimary
             });
         });
 
-        return { players, routes: [] }; // Routes are now attached to players
+        // Collect Icons
+        const icons = [];
+        if (this.iconsLayer) {
+            Array.from(this.iconsLayer.children).forEach(g => {
+                const id = g.dataset.id;
+                const type = g.dataset.type;
+                const x = parseFloat(g.getAttribute('transform').match(/translate\(([^,]+),([^)]+)\)/)[1]);
+                const y = parseFloat(g.getAttribute('transform').match(/translate\(([^,]+),([^)]+)\)/)[2]);
+                icons.push({ id, type, x, y });
+            });
+        }
+
+        return { players, routes: [], icons }; // Routes are now attached to players
     }
 
     getRoutePoints(routeId) {
@@ -229,7 +287,9 @@ export class Editor {
 
     clear() {
         this.playersLayer.innerHTML = '';
+        this.playersLayer.innerHTML = '';
         this.routesLayer.innerHTML = '';
+        if (this.iconsLayer) this.iconsLayer.innerHTML = '';
         this.deselectPlayer();
     }
 
@@ -239,6 +299,31 @@ export class Editor {
         if (this.isLocked) return;
 
         const target = e.target;
+
+        // 1. Check Icons first (on top of field, maybe below players?)
+        // Actually players are on top.
+        const iconGroup = target.closest('g.icon-group');
+        if (iconGroup) {
+            this.isDragging = true;
+            this.draggedElement = iconGroup;
+            this.draggedType = 'icon';
+
+            // Get current transform
+            const transform = iconGroup.getAttribute('transform');
+            const match = transform.match(/translate\(([^,]+),([^)]+)\)/);
+            const curX = parseFloat(match[1]);
+            const curY = parseFloat(match[2]);
+
+            const pt = this.getPointFromEvent(e);
+            this.dragOffset = { x: pt.x - curX, y: pt.y - curY };
+
+            // Select Icon (for deletion)
+            this.selectIcon(iconGroup);
+
+            e.stopPropagation();
+            return;
+        }
+
         // Check if hitting a player group or circle
         const playerGroup = target.closest('g.player-group');
 
@@ -271,47 +356,25 @@ export class Editor {
             // Select on mouse down
             const playerId = playerGroup.dataset.id;
 
-            const text = playerGroup.querySelector('text');
-            // circle already defined above as visual-only
-            const polygon = playerGroup.querySelector('polygon');
-            // FIX: Ensure we don't read transparent fill
-            const color = (circle || polygon).getAttribute('fill');
+            // FULLY Reconstruct Player Object from DOM/getData to ensure UI gets all properties
+            // This fixes the issue where sidebar was blank because we passed an incomplete object.
+            const allData = this.getData();
+            const playerObj = allData.players.find(p => p.id === playerId);
 
-            // Reconstruct Route State
-            const routeId = playerGroup.dataset.routeId;
-            const routeGroup = document.getElementById(routeId);
-            let routePoints = [];
-            let routeStyles = [];
-            let routeEndType = 'arrow';
-
-            if (routeGroup) {
-                if (routeGroup.tagName.toLowerCase() === 'g') {
-                    routeEndType = routeGroup.dataset.endType || 'arrow';
-                    const lines = Array.from(routeGroup.querySelectorAll('line'));
-                    lines.forEach(line => {
-                        const x = parseFloat(line.getAttribute('x2'));
-                        const y = parseFloat(line.getAttribute('y2'));
-                        routePoints.push({ x, y });
-                        routeStyles.push(line.dataset.style || 'solid');
-                    });
-                }
+            if (playerObj) {
+                // Attach DOM element reference which is needed by selectPlayer/rendering
+                playerObj.element = playerGroup;
+                this.selectPlayer(playerObj);
+            } else {
+                // Fallback if not found (should be rare)
+                this.selectPlayer({
+                    id: playerId,
+                    element: playerGroup,
+                    x: cx, y: cy,
+                    color: playerGroup.dataset.color || '#1f2937',
+                    label: playerGroup.dataset.label || ''
+                });
             }
-
-            const player = {
-                id: playerId,
-                element: playerGroup,
-                routeId: routeId,
-                color: (circle || polygon) ? (circle || polygon).getAttribute('fill') : '#1f2937',
-                label: text ? text.textContent : '',
-                x: cx, // Store current x
-                y: cy, // Store current y
-                route: routePoints,
-                routeStyles: routeStyles,
-                routeEndType: routeEndType,
-                isPrimary: !!polygon // Pass primary status derived from DOM
-            };
-            this.selectPlayer(player);
-
             e.stopPropagation(); // Keep this
         }
     }
@@ -323,6 +386,13 @@ export class Editor {
         const newX = pt.x - this.dragOffset.x;
         const newY = pt.y - this.dragOffset.y;
 
+        if (this.draggedType === 'icon') {
+            this.draggedElement.setAttribute('transform', `translate(${newX},${newY})`);
+            return;
+        }
+
+        // Player Dragging Logic
+        // ... previous logic ... -> needs careful merging
         // Calculate Delta
         // FIX: Discriminate between Visual Circle and Hit Shield
         const visualCircle = this.draggedElement.querySelector('circle:not(.hit-area)');
@@ -448,6 +518,7 @@ export class Editor {
     handleMouseUp(e) {
         this.isDragging = false;
         this.draggedElement = null;
+        this.draggedType = null;
     }
 
     handleCanvasClick(e) {
@@ -466,7 +537,7 @@ export class Editor {
         }
 
         // Ignore clicks on players (handled by mousedown)
-        if (e.target.closest && e.target.closest('g.player-group')) return;
+        if (e.target.closest && (e.target.closest('g.player-group') || e.target.closest('g.icon-group'))) return;
 
         // Check valid field targets
         const isField = e.target.id === this.svg.id || e.target.id === 'field-layer' || e.target.tagName === 'rect';
@@ -615,80 +686,178 @@ export class Editor {
         routeGroup.innerHTML = '';
 
         const points = player.route || []; // Array of {x, y}
-        if (points.length === 0) return;
-
-        // Origin
-        let startX = player.x;
-        let startY = player.y;
-
         const styles = player.routeStyles || [];
         const color = player.color || '#1f2937';
         // FIX: Robust hex generation (case insensitive, strip all #)
         const hex = color.replace(/#/g, '').toLowerCase();
         const endType = player.routeEndType || 'arrow';
 
-        points.forEach((pt, index) => {
-            let style = styles[index] || 'solid';
-            // Removed fallback: if (style === 'squiggly') style = 'solid';
-
-            // Handle Squiggly as Path, others as Line?
-            // "Use <path> instead of <line> for squiggly segments"
-
-            if (style === 'squiggly') {
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                // Calculate d
-                const d = this.createZigZagPath(startX, startY, pt.x, pt.y);
-                path.setAttribute('d', d);
-                path.setAttribute('fill', 'none');
-                path.setAttribute('stroke', color);
-                path.setAttribute('stroke-width', '3');
-                path.setAttribute('stroke-linejoin', 'round');
-                path.setAttribute('stroke-linecap', 'round');
-                path.dataset.style = style; // For retrieval
-
-                // Marker on Path (only last segment)
-                if (index === points.length - 1) {
-                    if (endType === 'circle') {
-                        path.setAttribute('marker-end', `url(#circlehead-${hex})`);
-                    } else {
-                        path.setAttribute('marker-end', `url(#arrowhead-${hex})`);
-                    }
-                }
-
-                routeGroup.appendChild(path);
-
-            } else {
-                const segment = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                segment.setAttribute('x1', startX);
-                segment.setAttribute('y1', startY);
-                segment.setAttribute('x2', pt.x);
-                segment.setAttribute('y2', pt.y);
-                if (style === 'dashed') {
-                    segment.setAttribute('stroke-dasharray', '8,8');
-                }
-
-                segment.setAttribute('stroke', color);
-                segment.setAttribute('stroke-width', '3');
-                segment.dataset.style = style; // For retrieval
-
-                // Marker (only on last segment)
-                if (index === points.length - 1) {
-                    if (endType === 'circle') {
-                        segment.setAttribute('marker-end', `url(#circlehead-${hex})`);
-                    } else {
-                        segment.setAttribute('marker-end', `url(#arrowhead-${hex})`);
-                    }
-                }
-                routeGroup.appendChild(segment);
-            }
-
-            // Update start for next segment
-            startX = pt.x;
-            startY = pt.y;
-        });
-
-        // Store endType on the group for easy retrieval
         routeGroup.dataset.endType = endType;
+        routeGroup.dataset.cutType = player.routeCutType || 'hard';
+
+        // Render Logic
+        const cutType = player.routeCutType || 'hard';
+
+        if (cutType === 'hard' || points.length < 1) {
+            // Standard Hard Comers
+            let startX = player.x;
+            let startY = player.y;
+
+            points.forEach((pt, index) => {
+                const style = styles[index] || 'solid';
+                const isLast = index === points.length - 1;
+
+                if (style === 'squiggly') {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', this.createZigZagPath(startX, startY, pt.x, pt.y));
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke', color);
+                    path.setAttribute('stroke-width', '3');
+                    path.setAttribute('stroke-linejoin', 'round');
+                    // CRITICAL FIX: Persist style so getData() can read it back
+                    path.setAttribute('data-style', 'squiggly');
+                    path.setAttribute('stroke-linecap', 'round');
+                    path.dataset.index = index;
+
+                    if (isLast) {
+                        if (endType === 'circle') {
+                            path.setAttribute('marker-end', `url(#circlehead-${hex})`);
+                        } else {
+                            path.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+                        }
+                    }
+                    routeGroup.appendChild(path);
+                } else {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', startX);
+                    line.setAttribute('y1', startY);
+                    line.setAttribute('x2', pt.x);
+                    line.setAttribute('y2', pt.y);
+                    line.setAttribute('stroke', color);
+                    line.setAttribute('stroke-width', '3');
+                    // CRITICAL FIX: Persist style
+                    line.setAttribute('data-style', style);
+                    line.dataset.index = index;
+
+                    if (style === 'dashed') {
+                        line.setAttribute('stroke-dasharray', '10,5');
+                    }
+
+                    if (isLast) {
+                        if (endType === 'circle') {
+                            line.setAttribute('marker-end', `url(#circlehead-${hex})`);
+                        } else {
+                            line.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+                        }
+                    }
+                    routeGroup.appendChild(line);
+                }
+                startX = pt.x;
+                startY = pt.y;
+            });
+
+        } else {
+            // Rounded Corners
+            let currentX = player.x;
+            let currentY = player.y;
+            const radius = 20; // Fillet radius
+
+            for (let i = 0; i < points.length; i++) {
+                const pt = points[i];
+                const nextPt = points[i + 1]; // undefined if last
+                const style = styles[i] || 'solid';
+                const isLast = i === points.length - 1;
+
+                // Determine effective start/end for the linear part
+                let lineStartX = currentX;
+                let lineStartY = currentY;
+                let lineEndX = pt.x;
+                let lineEndY = pt.y;
+
+                // Adjust for Next Turn (Shorten end)
+                // We only shorten if there IS a next point
+                if (!isLast) {
+                    const dist = Math.hypot(pt.x - currentX, pt.y - currentY);
+                    const r = Math.min(radius, dist / 2);
+                    const angle = Math.atan2(pt.y - currentY, pt.x - currentX);
+                    lineEndX = pt.x - Math.cos(angle) * r;
+                    lineEndY = pt.y - Math.sin(angle) * r;
+                }
+
+                // Draw Linear Part
+                let seg;
+                if (style === 'squiggly') {
+                    seg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    seg.setAttribute('d', this.createZigZagPath(lineStartX, lineStartY, lineEndX, lineEndY));
+                    seg.setAttribute('fill', 'none');
+                } else {
+                    seg = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    seg.setAttribute('x1', lineStartX);
+                    seg.setAttribute('y1', lineStartY);
+                    seg.setAttribute('x2', lineEndX);
+                    seg.setAttribute('y2', lineEndY);
+                    if (style === 'dashed') seg.setAttribute('stroke-dasharray', '8,8');
+                }
+                seg.setAttribute('stroke', color);
+                seg.setAttribute('stroke-width', '3');
+
+                // If this is the very last segment of the route, add marker here
+                if (isLast) {
+                    this._addMarker(seg, endType, hex);
+                }
+
+                routeGroup.appendChild(seg);
+
+                // Draw Curve (Turn)
+                if (!isLast && nextPt) {
+                    // Start of curve is lineEndX, lineEndY
+                    // Control point is pt.x, pt.y
+                    // End of curve is somewhat into the next segment
+
+                    const distNext = Math.hypot(nextPt.x - pt.x, nextPt.y - pt.y);
+                    const rNext = Math.min(radius, distNext / 2);
+                    const angleNext = Math.atan2(nextPt.y - pt.y, nextPt.x - pt.x);
+
+                    const curveEndX = pt.x + Math.cos(angleNext) * rNext;
+                    const curveEndY = pt.y + Math.sin(angleNext) * rNext;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    // Quadratic Bezier: M start Q control end
+                    const d = `M ${lineEndX} ${lineEndY} Q ${pt.x} ${pt.y} ${curveEndX} ${curveEndY}`;
+                    path.setAttribute('d', d);
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke', color);
+                    path.setAttribute('stroke-width', '3');
+                    // Inherit style from previous segment (or solid if squiggly?)
+                    if (style === 'dashed') path.setAttribute('stroke-dasharray', '8,8');
+
+                    routeGroup.appendChild(path);
+
+                    // Update current for next loop to be end of curve
+                    currentX = curveEndX;
+                    currentY = curveEndY;
+                }
+            }
+        }
+    }
+
+    _addMarker(el, type, hex) {
+        if (type === 'circle') {
+            el.setAttribute('marker-end', `url(#circlehead-${hex})`);
+        } else {
+            el.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+        }
+    }
+
+    updateRouteCutType(type) {
+        if (!this.selectedPlayer) return;
+        this.selectedPlayer.routeCutType = type;
+
+        // Persist via dataset on the group? 
+        // renderRoute handles storing dataset.cutType
+        // But renderRoute needs the property on the object.
+
+        this.renderRoute(this.selectedPlayer);
     }
 
     updatePlayerLabel(label) {
@@ -773,6 +942,12 @@ export class Editor {
             if (ring) ring.remove();
 
             this.selectedPlayer = null;
+        }
+
+        if (this.selectedIcon && this.selectedIcon.element) {
+            const ring = this.selectedIcon.element.querySelector('.selection-ring');
+            if (ring) ring.remove();
+            this.selectedIcon = null;
         }
 
         // Hide Sidebar
@@ -908,49 +1083,212 @@ export class Editor {
                 this.deletePlayer(this.selectedPlayer.id);
                 this.deselectPlayer();
             }
+        } else if (this.selectedIcon) {
+            // Instant delete for icons? Or confirm? 
+            // Icons are minor, maybe instant is fine. Or match player behavior.
+            this.deleteIcon(this.selectedIcon.id);
+            this.deselectPlayer(); // Clears icon selection too
         }
     }
 
+    deleteIcon(id) {
+        if (!this.iconsLayer) return;
+        const group = this.iconsLayer.querySelector(`[data-id="${id}"]`);
+        if (group) group.remove();
+    }
+
+    addIcon(type) {
+        if (this.isLocked) return;
+
+        const id = 'icon_' + Date.now();
+        // Place in center-ish or slightly offset
+        const x = 500;
+        const y = 350;
+
+        const icon = { id, type, x, y };
+        this.renderIcon(icon);
+
+        // Select it
+        const group = this.iconsLayer.querySelector(`[data-id="${id}"]`);
+        if (group) this.selectIcon(group);
+    }
+
+    renderIcon(icon) {
+        if (!this.iconsLayer) return;
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'icon-group');
+        g.setAttribute('data-id', icon.id);
+        g.setAttribute('data-type', icon.type);
+        g.setAttribute('transform', `translate(${icon.x},${icon.y})`);
+        g.style.cursor = 'move';
+
+        // Add correct image
+        const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        // Icon size: User requested 25x25 pixels
+        // Icon size: User requested 50x50 pixels
+        const size = 50;
+        image.setAttribute('x', -size / 2);
+        image.setAttribute('y', -size / 2);
+        image.setAttribute('width', size);
+        image.setAttribute('height', size);
+
+        if (icon.type === 'football') {
+            image.setAttribute('href', 'images/football.png');
+        } else {
+            image.setAttribute('href', 'images/fake_football.png');
+        }
+
+        g.appendChild(image);
+        this.iconsLayer.appendChild(g);
+
+        // Return element for immediate dragging
+        return g;
+    }
+
+    startDragNewIcon(type, event) {
+        if (this.isLocked) return;
+
+        const id = 'icon_' + Date.now();
+        // Calculate initial pos from event
+        const pt = this.getPointFromEvent(event);
+
+        // Create icon at mouse
+        const icon = { id, type, x: pt.x, y: pt.y };
+
+        // Render
+        const g = this.renderIcon(icon);
+
+        // Select it
+        this.selectIcon(g);
+
+        // Init Drag
+        this.isDragging = true;
+        this.draggedElement = g;
+        this.draggedType = 'icon';
+
+        // Offset is 0 since we centered it on mouse
+        this.dragOffset = { x: 0, y: 0 };
+    }
+
+    selectIcon(group) {
+        this.deselectPlayer(); // Clears existing selections
+
+        this.selectedIcon = {
+            id: group.dataset.id,
+            element: group
+        };
+
+        // Add selection ring to the group
+        let ring = group.querySelector('.selection-ring');
+        if (!ring) {
+            ring = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            ring.setAttribute('class', 'selection-ring');
+            const size = 50;
+            const padding = 4;
+            ring.setAttribute('x', -(size / 2) - padding);
+            ring.setAttribute('y', -(size / 2) - padding);
+            ring.setAttribute('width', size + padding * 2);
+            ring.setAttribute('height', size + padding * 2);
+            ring.setAttribute('fill', 'none');
+            ring.setAttribute('stroke', '#3b82f6'); // Selection blue
+            ring.setAttribute('stroke-width', '2');
+            ring.setAttribute('stroke-dasharray', '4,2');
+            ring.style.pointerEvents = 'none';
+            group.appendChild(ring);
+        }
+
+        // Show Sidebar? Or just enable delete button?
+        // UI might want to show "Icon Selected"
+        // For now, at least enable Delete button.
+        if (this.ui && this.ui.updateSidebarForIcon) {
+            const type = group.dataset.type;
+            this.ui.updateSidebarForIcon(type);
+        }
+    }
+
+    // Helper: Ensure Hex Color
+    ensureHex(color) {
+        if (!color) return '#1f2937';
+        // If already Hex
+        if (color.startsWith('#')) return color;
+        // If rgb(r, g, b)
+        if (color.startsWith('rgb')) {
+            const match = color.match(/\d+/g);
+            if (match && match.length >= 3) {
+                const r = parseInt(match[0]);
+                const g = parseInt(match[1]);
+                const b = parseInt(match[2]);
+                return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+            }
+        }
+        // Fallback or named color (not supported by our markers currently, assume default)
+        return '#1f2937';
+    }
+
     undoLastRoutePoint(playerObj) {
+        console.log("Undo requested for", playerObj || this.selectedPlayer);
         // If called without arg, use selected
         const p = playerObj || this.selectedPlayer;
         if (!p) return;
 
         const routeGroup = document.getElementById(p.routeId);
-        if (!routeGroup) return;
+        if (!routeGroup) {
+            console.log("No route group found for undo");
+            return;
+        }
 
+        // Tag name check
         if (routeGroup.tagName.toLowerCase() === 'g') {
-            const lines = routeGroup.querySelectorAll('line');
-            if (lines.length > 0) {
-                // Remove last line
-                lines[lines.length - 1].remove();
+            // ROBUST: Just get all children, they should be lines or paths
+            const children = Array.from(routeGroup.children);
+            console.log("Found segments:", children.length);
 
-                // If there are still segments, ensure the NEW last segment has the marker
-                const remaining = routeGroup.querySelectorAll('line');
+            if (children.length > 0) {
+                // Remove last element
+                const last = children[children.length - 1];
+                last.remove();
+                console.log("Removed last segment");
+
+                // Check remaining to re-apply marker
+                const remaining = Array.from(routeGroup.children);
                 if (remaining.length > 0) {
-                    const last = remaining[remaining.length - 1];
+                    const newLast = remaining[remaining.length - 1];
                     const endType = routeGroup.dataset.endType || 'arrow';
-                    const color = p.element.querySelector('circle').getAttribute('fill');
-                    const hex = color.replace('#', '');
+
+                    // Recalculate color from player or remaining element stroke
+                    const stroke = newLast.getAttribute('stroke') || '#1f2937';
+                    const hex = this.ensureHex(stroke).replace(/#/g, '').toLowerCase();
 
                     if (endType === 'circle') {
-                        last.setAttribute('marker-end', `url(#circlehead-${hex})`);
+                        newLast.setAttribute('marker-end', `url(#circlehead-${hex})`);
                     } else {
-                        last.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+                        newLast.setAttribute('marker-end', `url(#arrowhead-${hex})`);
                     }
                 }
 
                 // Update internal model
                 if (p.route && p.route.length > 0) {
                     p.route.pop();
+                    console.log("Popped route point. Remaining:", p.route.length);
                 }
                 if (p.routeStyles && p.routeStyles.length > 0) {
                     p.routeStyles.pop();
                 }
 
-                // Update Sidebar to reflect removal
+                // Update Sidebar
                 if (this.selectedPlayer && this.selectedPlayer.id === p.id) {
                     if (this.ui && this.ui.updateSidebar) this.ui.updateSidebar(this.selectedPlayer);
+                }
+
+                // Save state
+                if (this.app && this.app.saveCurrentPlay) {
+                    this.app.saveCurrentPlay();
+                } else if (window.app && window.app.saveCurrentPlay) {
+                    // Fallback to global if set
+                    window.app.saveCurrentPlay();
+                } else {
+                    console.warn("Editor: Cannot save play, app reference missing");
                 }
             }
         }
@@ -974,20 +1312,29 @@ export class Editor {
         if (routeGroup && routeGroup.tagName.toLowerCase() === 'g') {
             // FIX: Ignore invisible hit-area when reading color
             const circle = this.selectedPlayer.element.querySelector('circle:not(.hit-area)');
-            const color = circle ? circle.getAttribute('fill') : (this.selectedPlayer.color || '#1f2937');
-
+            // Prefer internal state if available, or fallback to DOM
+            const rawColor = this.selectedPlayer.color || (circle ? circle.getAttribute('fill') : '#1f2937');
+            const color = this.ensureHex(rawColor);
             const hex = color.replace(/#/g, '').toLowerCase();
-            const lines = routeGroup.querySelectorAll('line');
 
-            // Update marker on LAST segment only
-            if (lines.length > 0) {
-                const lastLine = lines[lines.length - 1];
+            // Robustly select ALL segments via children
+            const segments = Array.from(routeGroup.children);
+
+            // Apply logic to finding the last segment
+            if (segments.length > 0) {
+                const lastSeg = segments[segments.length - 1];
+
                 if (type === 'circle') {
-                    lastLine.setAttribute('marker-end', `url(#circlehead-${hex})`);
+                    lastSeg.setAttribute('marker-end', `url(#circlehead-${hex})`);
                 } else {
-                    lastLine.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+                    lastSeg.setAttribute('marker-end', `url(#arrowhead-${hex})`);
                 }
             }
+
+            // CLEANUP: Ensure previous segments don't have markers
+            segments.forEach((seg, index) => {
+                if (index !== segments.length - 1) seg.removeAttribute('marker-end');
+            });
 
             // Save to dataset for persistence
             routeGroup.dataset.endType = type;
@@ -1003,7 +1350,6 @@ export class Editor {
                 ring.setAttribute('stroke', color);
             }
 
-            // Update selected player object color property
             // Update selected player object color property
             this.selectedPlayer.color = color;
             // ROBUST: Update dataset for persistence
@@ -1025,52 +1371,31 @@ export class Editor {
                 polygon.setAttribute('fill', color);
             }
 
-
-
             // Update Route Color
             const routeGroup = document.getElementById(this.selectedPlayer.routeId);
             if (routeGroup) {
-                const hex = color.replace(/#/g, '').toLowerCase();
+                // Ensure Hex for marker lookup
+                const hex = this.ensureHex(color).replace(/#/g, '').toLowerCase();
+                const endType = routeGroup.dataset.endType || 'arrow';
 
-                // Update Lines
-                const lines = routeGroup.querySelectorAll('line');
-                lines.forEach((line, index) => {
-                    line.setAttribute('stroke', color);
-                    // Update marker on last segment (if line)
-                    // Note: markers are usually on the very last element of the group
-                    if (index === lines.length - 1 && routeGroup.lastElementChild === line) {
-                        // This check is a bit loose if paths are mixed. 
-                        // Better: check if it HAS a marker-end?
-                        if (line.hasAttribute('marker-end')) {
-                            const endType = routeGroup.dataset.endType || 'arrow';
-                            if (endType === 'circle') {
-                                line.setAttribute('marker-end', `url(#circlehead-${hex})`);
-                            } else {
-                                line.setAttribute('marker-end', `url(#arrowhead-${hex})`);
-                            }
-                        }
-                    } else if (line.hasAttribute('marker-end')) {
-                        // In case lines are mixed, just update any marker found
-                        const endType = routeGroup.dataset.endType || 'arrow';
-                        if (endType === 'circle') {
-                            line.setAttribute('marker-end', `url(#circlehead-${hex})`);
-                        } else {
-                            line.setAttribute('marker-end', `url(#arrowhead-${hex})`);
-                        }
-                    }
-                });
+                // Robustly select ALL segments via children
+                const segments = Array.from(routeGroup.children);
 
-                // Update Paths (Squiggly)
-                const paths = routeGroup.querySelectorAll('path');
-                paths.forEach(path => {
-                    path.setAttribute('stroke', color);
-                    if (path.hasAttribute('marker-end')) {
-                        const endType = routeGroup.dataset.endType || 'arrow';
+                segments.forEach((seg, index) => {
+                    seg.setAttribute('stroke', color);
+
+                    // Logic for Markers: Only on the LAST segment
+                    const isLast = index === segments.length - 1;
+
+                    if (isLast) {
                         if (endType === 'circle') {
-                            path.setAttribute('marker-end', `url(#circlehead-${hex})`);
+                            seg.setAttribute('marker-end', `url(#circlehead-${hex})`);
                         } else {
-                            path.setAttribute('marker-end', `url(#arrowhead-${hex})`);
+                            seg.setAttribute('marker-end', `url(#arrowhead-${hex})`);
                         }
+                    } else {
+                        // Cleanup
+                        seg.removeAttribute('marker-end');
                     }
                 });
             }

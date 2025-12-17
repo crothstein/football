@@ -9,6 +9,7 @@ class App {
         this.auth = new AuthManager();
         this.store = new Store();
         this.editor = new Editor('play-canvas');
+        this.editor.setApp(this); // Inject app reference for saving
         this.ui = new UI(this.store, this); // Pass app reference to UI
         this.editor.setUI(this.ui); // Inject UI for snackbar access
 

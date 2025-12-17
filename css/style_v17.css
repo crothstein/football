@@ -190,7 +190,7 @@ body {
     background: white;
     box-shadow: var(--shadow-lg);
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 #play-canvas {
