@@ -129,7 +129,8 @@ export class Store {
         const playData = {
             formation: play.formation,
             players: play.players,
-            routes: play.routes
+            routes: play.routes,
+            icons: play.icons || [] // Include icons
         };
 
         const payload = {

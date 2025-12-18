@@ -146,8 +146,8 @@ def generate_svg(play, w=400, h=300):
         # Use full width
         svg_content += f'<line x1="0" y1="{y}" x2="{w}" y2="{y}" stroke="{stroke}" stroke-width="{width}" />'
 
-    scale_x = w / 800
-    scale_y = h / 600
+    scale_x = w / 1000  # Field is 1000px wide
+    scale_y = h / 700    # Field is 700px tall
 
     # Routes
     for p in players:
@@ -180,8 +180,7 @@ def generate_svg(play, w=400, h=300):
                 marker_id = "arrowhead-1f2937" 
 
             # Scale stroke width so arrows remain visually consistent relative to canvas size
-            # Base width 3 on 800px canvas = 0.375% factor
-            # For 400px canvas, we want 1.5 width.
+            # Base width 3 on 1000px canvas
             stroke_width = max(1.5, 3 * scale_x)
 
             svg_content += f'<polyline points="{points_str}" fill="none" stroke="{color}" stroke-width="{stroke_width}" marker-end="url(#{marker_id})" />'
@@ -199,6 +198,20 @@ def generate_svg(play, w=400, h=300):
             ly = cy + (5 * scale_x)
             fs = 12 * scale_x
             svg_content += f'<text x="{cx}" y="{ly}" text-anchor="middle" fill="white" font-family="sans-serif" font-size="{fs}px" font-weight="bold">{p["label"]}</text>'
+    
+    # Icons (footballs/fake footballs)
+    icons = play_data.get('icons', [])
+    for icon in icons:
+        icon_x = icon['x'] * scale_x
+        icon_y = icon['y'] * scale_y
+        icon_type = icon.get('type', 'football')
+        image_src = '/images/football.png' if icon_type == 'football' else '/images/fake_football.png'
+        
+        # Match the 60px size from editor
+        icon_size = 60 * scale_x
+        half_size = icon_size / 2
+        
+        svg_content += f'<image href="{image_src}" x="{icon_x - half_size}" y="{icon_y - half_size}" width="{icon_size}" height="{icon_size}" />'
 
     return f'<svg viewBox="0 0 {w} {h}" width="100%" height="auto">{svg_content}</svg>'
 

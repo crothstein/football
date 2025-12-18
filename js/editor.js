@@ -682,8 +682,10 @@ export class Editor {
             this.routesLayer.appendChild(routeGroup);
         }
 
-        // Clear existing segments
-        routeGroup.innerHTML = '';
+        // Clear existing segments - use removeChild loop for reliability
+        while (routeGroup.firstChild) {
+            routeGroup.removeChild(routeGroup.firstChild);
+        }
 
         const points = player.route || []; // Array of {x, y}
         const styles = player.routeStyles || [];

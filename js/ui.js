@@ -645,9 +645,8 @@ export class UI {
     createPlayPreviewSVG(play) {
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
-        // Use a moderate crop to reduce whitespace but not cut off content
-        // Keep some margins: 50px on sides, 25px top/bottom
-        svg.setAttribute("viewBox", "50 25 900 650");
+        // Show full field - no cropping
+        svg.setAttribute("viewBox", "0 0 1000 700");
         svg.setAttribute("width", "100%");
         svg.setAttribute("height", "100%");
         svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
@@ -763,6 +762,27 @@ export class UI {
                 text.setAttribute("font-weight", "600");
                 text.textContent = p.label || '';
                 svg.appendChild(text);
+            });
+        }
+
+        // Render Icons (footballs/fake footballs)
+        if (play.icons) {
+            play.icons.forEach(icon => {
+                const iconGroup = document.createElementNS(svgNS, "g");
+                iconGroup.setAttribute("transform", `translate(${icon.x}, ${icon.y})`);
+
+                const iconImage = document.createElementNS(svgNS, "image");
+                // Determine image src based on icon type
+                const imageSrc = icon.type === 'football' ? 'images/football.png' : 'images/fake_football.png';
+                iconImage.setAttributeNS("http://www.w3.org/1999/xlink", "href", imageSrc);
+                // Match the new 60px size from editor
+                iconImage.setAttribute("width", "60");
+                iconImage.setAttribute("height", "60");
+                iconImage.setAttribute("x", "-30");
+                iconImage.setAttribute("y", "-30");
+                iconGroup.appendChild(iconImage);
+
+                svg.appendChild(iconGroup);
             });
         }
 

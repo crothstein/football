@@ -359,6 +359,12 @@ class App {
                         this.currentPlaybook.plays = this.currentPlaybook.plays.filter(p => p.id !== this.currentPlay.id);
                     }
 
+                    // Close the play settings modal if it's open
+                    const playSettingsModal = document.getElementById('modal-play-settings');
+                    if (playSettingsModal && !playSettingsModal.classList.contains('hidden')) {
+                        playSettingsModal.classList.add('hidden');
+                    }
+
                     // Force navigation back without checking unsaved changes (since deleted)
                     this.hasUnsavedChanges = false;
                     this.editor.setLocked(true); // Reset state
@@ -580,6 +586,9 @@ class App {
             route: [] // Force empty routes
         }));
 
+        // Lock editor to prevent unsaved changes warning
+        this.editor.setLocked(true);
+
         this.store.savePlaybook(this.currentPlaybook);
         console.log('Default formation saved');
     }
@@ -700,6 +709,7 @@ class App {
         const data = this.editor.getData();
         this.currentPlay.players = data.players;
         this.currentPlay.routes = data.routes;
+        this.currentPlay.icons = data.icons; // Save icons
         // Name is already updated via input listener, but let's ensure
         this.currentPlay.name = document.getElementById('play-name').value;
 
