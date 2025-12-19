@@ -177,7 +177,7 @@ export class PrintModule {
             item.style.width = `${wPercent}%`;
             item.style.height = `${hPercent}%`;
             item.style.border = '1px solid #ddd';
-            item.style.padding = '8px'; // Padding to prevent cutoff
+            item.style.padding = '4px'; // Reduced from 8px for better space utilization
             item.style.boxSizing = 'border-box';
         }
 
@@ -192,16 +192,24 @@ export class PrintModule {
         // Add wristband-specific styling
         if (layoutType === 'wristband') {
             header.style.fontSize = '6px';
-            header.style.padding = '1px 2px';
+            header.style.padding = '1px 4px'; // Reduced horizontal padding from left/right
             header.style.height = '12px';
             header.style.minHeight = '12px';
             header.style.maxHeight = '12px';
             header.style.lineHeight = '1';
             header.style.overflow = 'hidden';
             header.style.whiteSpace = 'nowrap';
+            header.style.display = 'flex';
+            header.style.alignItems = 'center';
+            header.style.justifyContent = 'space-between';
             header.style.setProperty('background', '#4b5563', 'important'); // Dark gray background
             header.style.setProperty('color', 'white', 'important'); // White text
             header.style.borderBottom = '1px solid #374151';
+        } else {
+            // Playbook headers also need alignment
+            header.style.display = 'flex';
+            header.style.alignItems = 'center';
+            header.style.justifyContent = 'space-between';
         }
 
         header.innerHTML = `

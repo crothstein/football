@@ -366,14 +366,13 @@ export class UI {
                 card.dataset.id = play.id;
 
                 card.innerHTML = `
-                <div class="play-card-preview"></div>
                 <div class="play-card-info">
                     <div class="play-name">
                         <span class="play-number">${index + 1}.</span> 
                         ${play.name || 'Untitled Play'}
                     </div>
-                    <!-- Removed formation/custom text as requested -->
                 </div>
+                <div class="play-card-preview"></div>
             `;
 
                 // Inject SVG
@@ -611,35 +610,35 @@ export class UI {
     drawFieldOnSVG(svg) {
         const svgNS = "http://www.w3.org/2000/svg";
 
-        // Background
+        // Background (percentage coordinates)
         const rect = document.createElementNS(svgNS, "rect");
-        rect.setAttribute("width", "1000");
-        rect.setAttribute("height", "700");
+        rect.setAttribute("width", "100");
+        rect.setAttribute("height", "70");
         rect.setAttribute("fill", "#ffffff");
         svg.appendChild(rect);
 
-        // Lines helper
+        // Lines helper (percentage coordinates)
         const createLine = (y, color, width) => {
             const line = document.createElementNS(svgNS, "line");
             line.setAttribute("x1", "0");
             line.setAttribute("y1", y);
-            line.setAttribute("x2", "1000");
+            line.setAttribute("x2", "100");
             line.setAttribute("y2", y);
             line.setAttribute("stroke", color);
             line.setAttribute("stroke-width", width);
             svg.appendChild(line);
         };
 
-        // Center (LOS) - Dark Grey
-        createLine(350, '#9ca3af', 4);
+        // Center (LOS) - Dark Grey (pixel 350 → percentage 35)
+        createLine(35, '#9ca3af', 0.4);
 
-        // Lines Above
-        createLine(230, '#e5e7eb', 2);
-        createLine(110, '#e5e7eb', 2);
+        // Lines Above (pixels 230, 110 → percentages 23, 11)
+        createLine(23, '#e5e7eb', 0.2);
+        createLine(11, '#e5e7eb', 0.2);
 
-        // Lines Below
-        createLine(470, '#e5e7eb', 2);
-        createLine(590, '#e5e7eb', 2);
+        // Lines Below (pixels 470, 590 → percentages 47, 59)
+        createLine(47, '#e5e7eb', 0.2);
+        createLine(59, '#e5e7eb', 0.2);
     }
 
     createPlayPreviewSVG(play) {
@@ -681,39 +680,40 @@ export class UI {
             'f97316', '3b82f6', 'a855f7', '64748b', '000000'];
 
         colors.forEach(color => {
-            // Arrow marker
+            // Arrow marker (percentage coordinate system)
             const arrowMarker = document.createElementNS(svgNS, "marker");
             arrowMarker.setAttribute("id", `arrowhead-${color}-${uniqueId}`);
-            arrowMarker.setAttribute("markerWidth", "10");
-            arrowMarker.setAttribute("markerHeight", "10");
-            arrowMarker.setAttribute("refX", "5");
-            arrowMarker.setAttribute("refY", "5");
+            arrowMarker.setAttribute("markerWidth", "2.5");
+            arrowMarker.setAttribute("markerHeight", "2.5");
+            arrowMarker.setAttribute("refX", "2.8");
+            arrowMarker.setAttribute("refY", "1.5");
             arrowMarker.setAttribute("orient", "auto");
-            arrowMarker.setAttribute("markerUnits", "strokeWidth");
+            arrowMarker.setAttribute("markerUnits", "userSpaceOnUse");
+            arrowMarker.setAttribute("viewBox", "0 0 3 3");
 
             const arrowPolygon = document.createElementNS(svgNS, "polygon");
-            arrowPolygon.setAttribute("points", "0 0, 10 5, 0 10");
+            arrowPolygon.setAttribute("points", "0 0, 3 1.5, 0 3");
             arrowPolygon.setAttribute("fill", `#${color}`);
             arrowMarker.appendChild(arrowPolygon);
             defs.appendChild(arrowMarker);
 
-            // Circle marker
+            // Circle marker (percentage coordinate system)
             const circleMarker = document.createElementNS(svgNS, "marker");
             circleMarker.setAttribute("id", `circlehead-${color}-${uniqueId}`);
-            circleMarker.setAttribute("markerWidth", "10");
-            circleMarker.setAttribute("markerHeight", "10");
-            circleMarker.setAttribute("refX", "5");
-            circleMarker.setAttribute("refY", "5");
+            circleMarker.setAttribute("markerWidth", "2.5");
+            circleMarker.setAttribute("markerHeight", "2.5");
+            circleMarker.setAttribute("refX", "1.5");
+            circleMarker.setAttribute("refY", "1.5");
             circleMarker.setAttribute("orient", "auto");
-            circleMarker.setAttribute("markerUnits", "strokeWidth");
+            circleMarker.setAttribute("markerUnits", "userSpaceOnUse");
 
             const circle = document.createElementNS(svgNS, "circle");
-            circle.setAttribute("cx", "5");
-            circle.setAttribute("cy", "5");
-            circle.setAttribute("r", "4");
+            circle.setAttribute("cx", "1.5");
+            circle.setAttribute("cy", "1.5");
+            circle.setAttribute("r", "0.8");
             circle.setAttribute("fill", "#ffffff");
             circle.setAttribute("stroke", `#${color}`);
-            circle.setAttribute("stroke-width", "2");
+            circle.setAttribute("stroke-width", "0.15");
             circleMarker.appendChild(circle);
             defs.appendChild(circleMarker);
         });

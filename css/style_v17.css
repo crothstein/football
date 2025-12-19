@@ -983,7 +983,8 @@ body {
 .plays-grid {
     padding: 2rem;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    /* Increased from 200px for wider cards */
     gap: 1.5rem;
     overflow-y: auto;
 }
@@ -1004,7 +1005,9 @@ body {
 }
 
 .play-card-preview {
-    height: 140px;
+    aspect-ratio: 100 / 70;
+    /* Match field viewBox proportions */
+    width: 100%;
     background: transparent;
     /* Was #f1f5f9 */
     display: flex;

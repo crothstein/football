@@ -146,8 +146,31 @@ def generate_svg(play, w=400, h=300):
         # Use full width
         svg_content += f'<line x1="0" y1="{y}" x2="{w}" y2="{y}" stroke="{stroke}" stroke-width="{width}" />'
 
-    scale_x = w / 1000  # Field is 1000px wide
-    scale_y = h / 700    # Field is 700px tall
+    # MIGRATION: Convert pixel coordinates (1000×700) to percentage (100×70)
+    # Check if coordinates need migration
+    needs_migration = False
+    for p in players:
+        if p.get('x', 0) > 100 or p.get('y', 0) > 70:
+            needs_migration = True
+            break
+    
+    if needs_migration:
+        # Migrate player coordinates
+        for p in players:
+            p['x'] = p['x'] / 10
+            p['y'] = p['y'] / 10
+            if p.get('route'):
+                p['route'] = [{'x': pt['x'] / 10, 'y': pt['y'] / 10} for pt in p['route']]
+        
+        # Migrate icon coordinates
+        icons = play_data.get('icons', []) # Re-fetch icons after potential modification
+        for icon in icons:
+            icon['x'] = icon['x'] / 10
+            icon['y'] = icon['y'] / 10
+    
+    # Now work with percentage coordinates (100×70)
+    scale_x = w / 100  # New percentage-based scaling
+    scale_y = h / 70
 
     # Routes
     for p in players:
@@ -179,9 +202,9 @@ def generate_svg(play, w=400, h=300):
                 # Let's map to closest or default black.
                 marker_id = "arrowhead-1f2937" 
 
-            # Scale stroke width so arrows remain visually consistent relative to canvas size
-            # Base width 3 on 1000px canvas
-            stroke_width = max(1.5, 3 * scale_x)
+            # Scale stroke width for visibility (use original viewport scale for sizes)
+            # Since coordinates are now 0-100, but sizes should still be relative to viewport
+            stroke_width = max(1.5, 3 * (w / 1000))  # Use original scale for stroke width
 
             svg_content += f'<polyline points="{points_str}" fill="none" stroke="{color}" stroke-width="{stroke_width}" marker-end="url(#{marker_id})" />'
 
@@ -189,14 +212,14 @@ def generate_svg(play, w=400, h=300):
     for p in players:
         cx = p['x'] * scale_x
         cy = p['y'] * scale_y
-        r = 15 * scale_x
+        r = 15 * (w / 1000)  # Use original viewport scale for radius, not percentage scale
         color = p.get('color', '#3b82f6')
         
         svg_content += f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}" stroke="white" stroke-width="2" />'
         
         if p.get('label'):
-            ly = cy + (5 * scale_x)
-            fs = 12 * scale_x
+            ly = cy + (5 * (w / 1000))  # Use original scale
+            fs = 12 * (w / 1000)  # Use original scale
             svg_content += f'<text x="{cx}" y="{ly}" text-anchor="middle" fill="white" font-family="sans-serif" font-size="{fs}px" font-weight="bold">{p["label"]}</text>'
     
     # Icons (footballs/fake footballs)
@@ -207,8 +230,8 @@ def generate_svg(play, w=400, h=300):
         icon_type = icon.get('type', 'football')
         image_src = '/images/football.png' if icon_type == 'football' else '/images/fake_football.png'
         
-        # Match the 60px size from editor
-        icon_size = 60 * scale_x
+        # Match the 60px size from editor (use original scale)
+        icon_size = 60 * (w / 1000)  # Use original viewport scale
         half_size = icon_size / 2
         
         svg_content += f'<image href="{image_src}" x="{icon_x - half_size}" y="{icon_y - half_size}" width="{icon_size}" height="{icon_size}" />'
