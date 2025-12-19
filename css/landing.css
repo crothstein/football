@@ -307,6 +307,128 @@ header {
     margin-bottom: 40px;
 }
 
+/* Testimonials Section */
+.testimonials-section {
+    padding: 100px 40px;
+    background-color: white;
+}
+
+.testimonials-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.testimonials-container h2 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 60px;
+    color: var(--text-primary);
+}
+
+.testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+}
+
+.testimonial-card {
+    background: white;
+    padding: 32px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.testimonial-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.stars {
+    margin-bottom: 20px;
+}
+
+.star {
+    color: #fbbf24;
+    font-size: 1.25rem;
+    margin-right: 2px;
+}
+
+.testimonial-quote {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 24px;
+    flex-grow: 1;
+    font-style: italic;
+}
+
+.testimonial-author {
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+}
+
+.author-name {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+}
+
+.author-role {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* FAQ Section */
+.faq-section {
+    padding: 100px 40px;
+    background-color: var(--bg-light);
+    border-top: 1px solid var(--border-color);
+}
+
+.faq-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.faq-container h2 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 60px;
+    color: var(--text-primary);
+}
+
+.faq-item {
+    background: white;
+    padding: 32px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: box-shadow 0.2s;
+}
+
+.faq-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.faq-question {
+    font-size: 1.125rem;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.faq-answer {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin: 0;
+}
+
 /* Footer */
 footer {
     padding: 60px 40px;
@@ -356,5 +478,9 @@ footer {
 
     .check-list li {
         justify-content: center;
+    }
+
+    .testimonials-grid {
+        grid-template-columns: 1fr;
     }
 }

@@ -4,11 +4,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlagSketch - The Modern Playbook Creator</title>
+    <title>FlagSketch</title>
+    <meta name="description"
+        content="Design free flag football plays and print wrist coach inserts instantly. No download required. Works on iPad, Chromebook, and desktop for 5v5, 6v6, and 7v7 leagues.">
     <link rel="stylesheet" href="css/landing.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FAQ Schema Markup -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [{
+        "@type": "Question",
+        "name": "Is FlagSketch really free to use?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. FlagSketch is a free flag football play designer. You can create custom plays, build formations, and export your playbooks without paying for a subscription or downloading expensive software. However, we do offer paid plans if you need advanced features, such as custom team branding on your prints or specialized wristband layouts."
+        }
+      }, {
+        "@type": "Question",
+        "name": "How do I print plays for my wristbands?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "FlagSketch is designed specifically for wrist coaches. When you finish designing your plays, simply click 'Print' and select the 'Wristband' option. Our tool automatically formats your plays into a PDF sized perfectly for standard youth and adult wrist coach inserts."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Can I use this on my iPad or Chromebook?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Absolutely. FlagSketch is 100% web-based. It works directly in your browser on any device—including iPads, Android tablets, and Chromebooks. No app store download is required."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Do you have templates for 5v5, 6v6, and 7v7 leagues?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. We offer pre-built play templates for all major league formats, including 5v5, 6v6, and 7v7. You can start with a blank field or load a standard formation like 'Spread' or 'Trips' to save time."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Can I save my playbook and edit it later?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Your playbooks automatically save to your account, so you can access them from anywhere. This allows you to edit your strategies throughout the season as your team evolves."
+        }
+      }]
+    }
+    </script>
+
+    <!-- Application Schema Markup -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "FlagSketch",
+      "applicationCategory": "SportsApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": "Drag and drop play designer, PDF export, Wristband resizing",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "5",
+        "ratingCount": "3"
+      },
+      "review": [
+        {
+          "@type": "Review",
+          "author": { "@type": "Person", "name": "Mike T." },
+          "reviewRating": { "@type": "Rating", "ratingValue": "5" },
+          "reviewBody": "FlagSketch saved me. I dragged a few routes onto the field, printed them out, and we looked like we actually knew what we were doing."
+        },
+        {
+          "@type": "Review",
+          "author": { "@type": "Person", "name": "Coach Davis" },
+          "reviewRating": { "@type": "Rating", "ratingValue": "5" },
+          "reviewBody": "Best tool for wristbands, hands down. I used to spend hours resizing screenshots in Excel."
+        },
+        {
+          "@type": "Review",
+          "author": { "@type": "Person", "name": "Jason R." },
+          "reviewRating": { "@type": "Rating", "ratingValue": "5" },
+          "reviewBody": "With FlagSketch, I printed clear diagrams and they actually understood where to run."
+        }
+      ]
+    }
+    </script>
 </head>
 
 <body>
@@ -36,7 +124,7 @@
             <span class="subtitle-note">No credit card required.</span>
         </div>
         <div class="hero-image">
-            <img src="images/app_hero_screenshot.png" alt="FlagSketch Interface" class="hero-screenshot">
+            <img src="images/hero_final.png" alt="FlagSketch Interface" class="hero-screenshot">
         </div>
     </section>
 
@@ -59,9 +147,7 @@
             </ul>
         </div>
         <div class="feature-feature-image">
-            <!-- Simplified visual representation since we don't have a GIF yet. Re-using app hero but styled differently or a cropped version via CSS could work. For now just standard img. -->
-            <img src="images/app_hero_screenshot.png" style="transform: scale(1.1); clip-path: inset(10% 20% 15% 5%);"
-                alt="Easy Drag and Drop">
+            <img src="images/editor_clean.png" alt="Easy Drag and Drop">
         </div>
     </section>
 
@@ -74,17 +160,8 @@
             <p>FlagSketch automatically formats your plays into perfectly sized grids ready to print and slide into
                 standard wrist coaches. Just hit print, cut, and win.</p>
         </div>
-        <div class="feature-image">
-            <!-- Placeholder for wristband image. Attempting to use a div visually representing a grid. -->
-            <div
-                style="background: white; border: 2px solid #333; width: 200px; height: 140px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; padding: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-                <div style="background: #22c55e; height: 100%;"></div>
-                <div style="background: #f3f4f6; height: 100%;"></div>
-                <div style="background: #3b82f6; height: 100%;"></div>
-                <div style="background: #f3f4f6; height: 100%;"></div>
-                <div style="background: #3b82f6; height: 100%;"></div>
-                <div style="background: #22c55e; height: 100%;"></div>
-            </div>
+        <div class="feature-image" style="background: transparent; border: none; padding: 0;">
+            <img src="images/wristband_white.png" alt="Wristband with plays" style="max-width: 100%;">
         </div>
     </section>
 
@@ -118,6 +195,111 @@
         <h2>Ready to look like a pro this season?</h2>
         <p>Create your first play in less than 2 minutes.</p>
         <a href="app.html?mode=signup" class="btn-gradient btn-large">Create My Free Account</a>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials-section">
+        <div class="testimonials-container">
+            <h2>Trusted by Coaches & Leagues</h2>
+
+            <div class="testimonials-grid">
+                <!-- Testimonial 1 -->
+                <div class="testimonial-card">
+                    <div class="stars">
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                    </div>
+                    <p class="testimonial-quote">"I volunteered to coach my son's 5v5 team and had zero plays.
+                        FlagSketch saved me. I dragged a few routes onto the field, printed them out, and we looked like
+                        we actually knew what we were doing at practice."</p>
+                    <div class="testimonial-author">
+                        <p class="author-name">Mike T.</p>
+                        <p class="author-role">Youth League Coach</p>
+                    </div>
+                </div>
+
+                <!-- Testimonial 2 -->
+                <div class="testimonial-card">
+                    <div class="stars">
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                    </div>
+                    <p class="testimonial-quote">"Best tool for wristbands, hands down. I used to spend hours resizing
+                        screenshots in Excel. Now I just hit 'Print Wristband' and I get perfectly sized inserts for my
+                        whole QB rotation."</p>
+                    <div class="testimonial-author">
+                        <p class="author-name">Coach Davis</p>
+                        <p class="author-role">7v7 Competitive League</p>
+                    </div>
+                </div>
+
+                <!-- Testimonial 3 -->
+                <div class="testimonial-card">
+                    <div class="stars">
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                        <span class="star">★</span>
+                    </div>
+                    <p class="testimonial-quote">"I'm just a dad helping out, not a pro coach. The kids were completely
+                        confused by my hand-drawn scribbles. With FlagSketch, I printed clear diagrams and they actually
+                        understood where to run."</p>
+                    <div class="testimonial-author">
+                        <p class="author-name">Jason R.</p>
+                        <p class="author-role">First-Time Coach</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="faq-container">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <p class="faq-question"><strong>Q: Is FlagSketch really free to use?</strong></p>
+                <p class="faq-answer">A: Yes. FlagSketch is a free flag football play designer. You can create custom
+                    plays, build formations, and export your playbooks without paying for a subscription or downloading
+                    expensive software. However, we do offer paid plans if you need advanced features, such as custom
+                    team branding on your prints or specialized wristband layouts.</p>
+            </div>
+
+            <div class="faq-item">
+                <p class="faq-question"><strong>Q: How do I print plays for my wristbands?</strong></p>
+                <p class="faq-answer">A: FlagSketch is designed specifically for wrist coaches. When you finish
+                    designing your plays, simply click "Print" and select the "Wristband" option. Our tool automatically
+                    formats your plays into a PDF sized perfectly for standard youth and adult wrist coach inserts.</p>
+            </div>
+
+            <div class="faq-item">
+                <p class="faq-question"><strong>Q: Can I use this on my iPad or Chromebook?</strong></p>
+                <p class="faq-answer">A: Absolutely. FlagSketch is 100% web-based. It works directly in your browser on
+                    any device—including iPads, Android tablets, and Chromebooks. No app store download is required.</p>
+            </div>
+
+            <div class="faq-item">
+                <p class="faq-question"><strong>Q: Do you have templates for 5v5, 6v6, and 7v7 leagues?</strong></p>
+                <p class="faq-answer">A: Yes. We offer pre-built play templates for all major league formats, including
+                    5v5, 6v6, and 7v7. You can start with a blank field or load a standard formation like "Spread" or
+                    "Trips" to save time.</p>
+            </div>
+
+            <div class="faq-item">
+                <p class="faq-question"><strong>Q: Can I save my playbook and edit it later?</strong></p>
+                <p class="faq-answer">A: Yes. Your playbooks automatically save to your account, so you can access them
+                    from anywhere. This allows you to edit your strategies throughout the season as your team evolves.
+                </p>
+            </div>
+        </div>
     </section>
 
     <!-- Footer -->
