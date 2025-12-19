@@ -65,27 +65,27 @@ export class Editor {
         // Clear existing lines if any (keep the rect)
         fieldGroup.innerHTML = '';
 
-        // 1. White Background
+        // 1. White Background (now 100x70 viewBox)
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('width', '1000');
-        rect.setAttribute('height', '700');
+        rect.setAttribute('width', '100');
+        rect.setAttribute('height', '70');
         rect.setAttribute('fill', '#ffffff');
         fieldGroup.appendChild(rect);
 
-        // 2. Lines
-        // Canvas is 1000x700. Center y=350.
-        // User wants: "Gray lines go across entire white area". "At least two light gray lines above and below".
+        // 2. Lines (adjusted for 100x70 viewBox)
+        // Center y=35 (50% of 70)
+        // Lines at ~23, ~11.5 above and ~46.5, ~58.5 below
 
         // Center (LOS) - Dark Grey
-        this.createLine(fieldGroup, 0, 350, 1000, 350, '#9ca3af', 4);
+        this.createLine(fieldGroup, 0, 35, 100, 35, '#9ca3af', 0.4);
 
         // Lines Above
-        this.createLine(fieldGroup, 0, 230, 1000, 230, '#e5e7eb', 2);
-        this.createLine(fieldGroup, 0, 110, 1000, 110, '#e5e7eb', 2);
+        this.createLine(fieldGroup, 0, 23, 100, 23, '#e5e7eb', 0.2);
+        this.createLine(fieldGroup, 0, 11.5, 100, 11.5, '#e5e7eb', 0.2);
 
         // Lines Below
-        this.createLine(fieldGroup, 0, 470, 1000, 470, '#e5e7eb', 2);
-        this.createLine(fieldGroup, 0, 590, 1000, 590, '#e5e7eb', 2);
+        this.createLine(fieldGroup, 0, 47, 100, 47, '#e5e7eb', 0.2);
+        this.createLine(fieldGroup, 0, 59, 100, 59, '#e5e7eb', 0.2);
     }
 
     createLine(parent, x1, y1, x2, y2, color, width) {
@@ -131,6 +131,27 @@ export class Editor {
     loadData(play) {
         this.deselectPlayer(); // Ensure sidebar is closed and selection cleared
         this.clear();
+
+        // RUNTIME MIGRATION: Convert old pixel coordinates to percentage if needed
+        // CRITICAL FIX: Check and migrate ONCE, then mark as migrated to prevent infinite loops
+        if (!play.migrated && play.players && play.players.some(p => (p.x > 100 || p.y > 70))) {
+            console.log('🔄 Migrating coordinates from pixel to percentage...');
+            play.players.forEach(p => {
+                p.x = p.x / 10;
+                p.y = p.y / 10;
+                if (p.route) {
+                    p.route = p.route.map(pt => ({ x: pt.x / 10, y: pt.y / 10 }));
+                }
+            });
+            if (play.icons) {
+                play.icons.forEach(icon => {
+                    icon.x = icon.x / 10;
+                    icon.y = icon.y / 10;
+                });
+            }
+            play.migrated = true;
+        }
+
         if (play.players) {
             play.players.forEach(p => {
                 this.renderPlayer(p);
@@ -423,7 +444,7 @@ export class Editor {
 
         // Always update Star Polygon if present
         if (polygon) {
-            const points = this.calculateStarPoints(newX, newY, 5, 20, 10);
+            const points = this.calculateStarPoints(newX, newY, 5, 1.944, 0.972); // 10% smaller
             polygon.setAttribute('points', points);
         }
 
@@ -563,8 +584,8 @@ export class Editor {
 
         const id = 'p_' + Date.now();
         const routeId = 'r_' + id;
-        const x = 500; // Center (1000/2)
-        const y = 350; // Center (700/2)
+        const x = 50; // Center (50% of 100)
+        const y = 35; // Center (50% of 70)
 
         const player = {
             id, type, x, y, color: '#1f2937', label: '', route: []
@@ -603,48 +624,48 @@ export class Editor {
         g.dataset.label = player.label || '';
         g.dataset.isPrimary = !!player.isPrimary;
 
-        // Check for Primary (Star)
-        // Check for Primary (Star)
+        // Check for Primary (Star) - Scaled for percentage viewBox
         if (player.isPrimary) {
             // HIT TARGET: Transparent circle to fill gaps between star spikes
             const hitCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             hitCircle.setAttribute('class', 'hit-area'); // MARKER CLASS
             hitCircle.setAttribute('cx', player.x);
             hitCircle.setAttribute('cy', player.y);
-            hitCircle.setAttribute('r', '20'); // Match star outer radius
+            hitCircle.setAttribute('r', 1.944); // Match player size
             hitCircle.setAttribute('fill', 'transparent'); // Invisible but clickable
             hitCircle.setAttribute('stroke', 'none');
             g.appendChild(hitCircle);
 
             const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            const points = this.calculateStarPoints(player.x, player.y, 5, 20, 10);
+            const points = this.calculateStarPoints(player.x, player.y, 5, 1.944, 0.972); // 10% smaller
             polygon.setAttribute('points', points);
 
             polygon.setAttribute('stroke', player.color || '#1f2937');
-            polygon.setAttribute('stroke-width', '3');
+            polygon.setAttribute('stroke-width', '0.3');
             polygon.setAttribute('fill', player.color || '#1f2937');
             polygon.setAttribute('fill-opacity', '1');
             g.appendChild(polygon);
         } else {
-            // Circle
+            // Circle - Scaled for percentage viewBox
             const shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             shape.setAttribute('cx', player.x);
             shape.setAttribute('cy', player.y);
-            shape.setAttribute('r', 15);
+            shape.setAttribute('r', 1.944); // 10% smaller
 
             shape.setAttribute('stroke', player.color || '#1f2937');
-            shape.setAttribute('stroke-width', '3');
+            shape.setAttribute('stroke-width', '0.5');
             shape.setAttribute('fill', player.color || '#1f2937'); // Solid fill
             shape.setAttribute('fill-opacity', '1');
             g.appendChild(shape);
         }
 
-        // Text
+        // Text - Scaled font size
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', player.x);
         text.setAttribute('y', player.y);
         text.setAttribute('text-anchor', 'middle');
         text.setAttribute('dy', '.3em');
+        text.setAttribute('font-size', '1.6'); // Reduced to prevent overflow in stars
         text.textContent = player.label || '';
         text.setAttribute('fill', '#ffffff'); // White text on filled circle
         text.style.pointerEvents = 'none';
@@ -714,7 +735,7 @@ export class Editor {
                     path.setAttribute('d', this.createZigZagPath(startX, startY, pt.x, pt.y));
                     path.setAttribute('fill', 'none');
                     path.setAttribute('stroke', color);
-                    path.setAttribute('stroke-width', '3');
+                    path.setAttribute('stroke-width', '0.5');
                     path.setAttribute('stroke-linejoin', 'round');
                     // CRITICAL FIX: Persist style so getData() can read it back
                     path.setAttribute('data-style', 'squiggly');
@@ -736,13 +757,13 @@ export class Editor {
                     line.setAttribute('x2', pt.x);
                     line.setAttribute('y2', pt.y);
                     line.setAttribute('stroke', color);
-                    line.setAttribute('stroke-width', '3');
+                    line.setAttribute('stroke-width', '0.3');
                     // CRITICAL FIX: Persist style
                     line.setAttribute('data-style', style);
                     line.dataset.index = index;
 
                     if (style === 'dashed') {
-                        line.setAttribute('stroke-dasharray', '10,5');
+                        line.setAttribute('stroke-dasharray', '1,0.5'); // Scaled for percentage
                     }
 
                     if (isLast) {
@@ -762,7 +783,7 @@ export class Editor {
             // Rounded Corners
             let currentX = player.x;
             let currentY = player.y;
-            const radius = 20; // Fillet radius
+            const radius = 2; // Fillet radius - scaled from 20
 
             for (let i = 0; i < points.length; i++) {
                 const pt = points[i];
@@ -798,10 +819,10 @@ export class Editor {
                     seg.setAttribute('y1', lineStartY);
                     seg.setAttribute('x2', lineEndX);
                     seg.setAttribute('y2', lineEndY);
-                    if (style === 'dashed') seg.setAttribute('stroke-dasharray', '8,8');
+                    if (style === 'dashed') seg.setAttribute('stroke-dasharray', '0.8,0.8'); // Scaled
                 }
                 seg.setAttribute('stroke', color);
-                seg.setAttribute('stroke-width', '3');
+                seg.setAttribute('stroke-width', '0.3');
 
                 // If this is the very last segment of the route, add marker here
                 if (isLast) {
@@ -829,9 +850,9 @@ export class Editor {
                     path.setAttribute('d', d);
                     path.setAttribute('fill', 'none');
                     path.setAttribute('stroke', color);
-                    path.setAttribute('stroke-width', '3');
+                    path.setAttribute('stroke-width', '0.3');
                     // Inherit style from previous segment (or solid if squiggly?)
-                    if (style === 'dashed') path.setAttribute('stroke-dasharray', '8,8');
+                    if (style === 'dashed') path.setAttribute('stroke-dasharray', '0.8,0.8'); // Scaled
 
                     routeGroup.appendChild(path);
 
@@ -905,12 +926,12 @@ export class Editor {
             if (!ring) {
                 ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 ring.setAttribute('class', 'selection-ring');
-                ring.setAttribute('r', '24'); // Larger than player
+                ring.setAttribute('r', '2.3'); // Match smaller players
                 ring.setAttribute('fill', 'none');
                 // Use player color
                 ring.setAttribute('stroke', playerObj.color || '#3b82f6');
-                ring.setAttribute('stroke-width', '2');
-                ring.setAttribute('stroke-dasharray', '6,4'); // Tweak dash
+                ring.setAttribute('stroke-width', '0.2');
+                ring.setAttribute('stroke-dasharray', '0.6,0.4'); // Scaled dash pattern
                 ring.style.pointerEvents = 'none';
 
                 // Get coordinates
@@ -1055,7 +1076,7 @@ export class Editor {
         line.setAttribute('x2', pt.x);
         line.setAttribute('y2', pt.y);
         line.setAttribute('stroke', playerObj.color || '#1f2937');
-        line.setAttribute('stroke-width', '3');
+        line.setAttribute('stroke-width', '0.3');
         line.dataset.style = 'solid'; // Default
 
         if (endType === 'circle') {
@@ -1103,9 +1124,9 @@ export class Editor {
         if (this.isLocked) return;
 
         const id = 'icon_' + Date.now();
-        // Place in center-ish or slightly offset
-        const x = 500;
-        const y = 350;
+        // Place in center - percentage coordinates
+        const x = 50;
+        const y = 35;
 
         const icon = { id, type, x, y };
         this.renderIcon(icon);
@@ -1125,11 +1146,10 @@ export class Editor {
         g.setAttribute('transform', `translate(${icon.x},${icon.y})`);
         g.style.cursor = 'move';
 
-        // Add correct image
+        // Add correct image - scaled for percentage viewBox
         const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        // Icon size: User requested 25x25 pixels
-        // Icon size: User requested 50x50 pixels
-        const size = 50;
+        // Icon size: 7.2 units (20% larger than original 6)
+        const size = 7.2;
         image.setAttribute('x', -size / 2);
         image.setAttribute('y', -size / 2);
         image.setAttribute('width', size);
@@ -1186,16 +1206,16 @@ export class Editor {
         if (!ring) {
             ring = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             ring.setAttribute('class', 'selection-ring');
-            const size = 50;
-            const padding = 4;
+            const size = 7.2; // Icon size in percentage space (updated to 7.2)
+            const padding = 0.6; // Padding in percentage space
             ring.setAttribute('x', -(size / 2) - padding);
             ring.setAttribute('y', -(size / 2) - padding);
             ring.setAttribute('width', size + padding * 2);
             ring.setAttribute('height', size + padding * 2);
             ring.setAttribute('fill', 'none');
             ring.setAttribute('stroke', '#3b82f6'); // Selection blue
-            ring.setAttribute('stroke-width', '2');
-            ring.setAttribute('stroke-dasharray', '4,2');
+            ring.setAttribute('stroke-width', '0.2');
+            ring.setAttribute('stroke-dasharray', '0.4,0.2'); // Scaled dash pattern
             ring.style.pointerEvents = 'none';
             group.appendChild(ring);
         }
@@ -1561,13 +1581,13 @@ export class Editor {
         if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return `M 0 0`; // Fail safe
         // Create a zigzag/wavy path between two points
         const dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-        if (dist < 5) return `M ${x1} ${y1} L ${x2} ${y2}`;
+        if (dist < 0.5) return `M ${x1} ${y1} L ${x2} ${y2}`; // Scaled from 5
 
         const angle = Math.atan2(y2 - y1, x2 - x1);
 
-        // Parameters
-        const segmentLength = 15;
-        const amplitude = 6;
+        // Parameters - scaled for percentage viewBox
+        const segmentLength = 1.5;  // Was 15
+        const amplitude = 0.6;      // Was 6
         const steps = Math.floor(dist / segmentLength);
 
         let d = `M ${x1} ${y1}`;

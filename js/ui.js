@@ -645,11 +645,30 @@ export class UI {
     createPlayPreviewSVG(play) {
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
-        // Show full field - no cropping
-        svg.setAttribute("viewBox", "0 0 1000 700");
+        // Use same viewBox as main canvas (percentage coordinates)
+        svg.setAttribute("viewBox", "0 0 100 70");
         svg.setAttribute("width", "100%");
         svg.setAttribute("height", "100%");
         svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+        // RUNTIME MIGRATION: Convert old pixel coordinates to percentage if needed
+        // Use flag to prevent repeated migrations
+        if (!play.migrated && play.players && play.players.some(p => (p.x > 100 || p.y > 70))) {
+            play.players.forEach(p => {
+                p.x = p.x / 10;
+                p.y = p.y / 10;
+                if (p.route) {
+                    p.route = p.route.map(pt => ({ x: pt.x / 10, y: pt.y / 10 }));
+                }
+            });
+            if (play.icons) {
+                play.icons.forEach(icon => {
+                    icon.x = icon.x / 10;
+                    icon.y = icon.y / 10;
+                });
+            }
+            play.migrated = true;
+        }
 
         // Create unique ID suffix for this SVG to avoid conflicts
         const uniqueId = `svg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -721,7 +740,7 @@ export class UI {
                     polyline.setAttribute("points", pointsStr);
                     polyline.setAttribute("fill", "none");
                     polyline.setAttribute("stroke", p.color || '#1f2937');
-                    polyline.setAttribute("stroke-width", "3"); // Match build script for consistent arrow size
+                    polyline.setAttribute("stroke-width", "0.3"); // Scaled for percentage
 
                     // Markers: Use unique IDs for this SVG
                     const colorHex = (p.color || '#1f2937').replace('#', '');
@@ -744,10 +763,10 @@ export class UI {
                 const circle = document.createElementNS(svgNS, "circle");
                 circle.setAttribute("cx", p.x);
                 circle.setAttribute("cy", p.y);
-                circle.setAttribute("r", "20");
+                circle.setAttribute("r", "1.944"); // Match new player size
                 circle.setAttribute("fill", p.color || '#3b82f6');
                 circle.setAttribute("stroke", "white");
-                circle.setAttribute("stroke-width", "2");
+                circle.setAttribute("stroke-width", "0.2");
                 svg.appendChild(circle);
 
                 // Simplified Label (maybe too small for card preview? Keep standard size 14)
@@ -757,7 +776,7 @@ export class UI {
                 text.setAttribute("dy", "0.35em");
                 text.setAttribute("text-anchor", "middle");
                 text.setAttribute("fill", "white");
-                text.setAttribute("font-size", "14px");
+                text.setAttribute("font-size", "1.2"); // Scaled
                 text.setAttribute("font-family", "Inter, sans-serif");
                 text.setAttribute("font-weight", "600");
                 text.textContent = p.label || '';
@@ -775,11 +794,11 @@ export class UI {
                 // Determine image src based on icon type
                 const imageSrc = icon.type === 'football' ? 'images/football.png' : 'images/fake_football.png';
                 iconImage.setAttributeNS("http://www.w3.org/1999/xlink", "href", imageSrc);
-                // Match the new 60px size from editor
-                iconImage.setAttribute("width", "60");
-                iconImage.setAttribute("height", "60");
-                iconImage.setAttribute("x", "-30");
-                iconImage.setAttribute("y", "-30");
+                // Use 7.2 units for percentage space (20% larger)
+                iconImage.setAttribute("width", "7.2");
+                iconImage.setAttribute("height", "7.2");
+                iconImage.setAttribute("x", "-3.6");
+                iconImage.setAttribute("y", "-3.6");
                 iconGroup.appendChild(iconImage);
 
                 svg.appendChild(iconGroup);
@@ -793,16 +812,25 @@ export class UI {
         const container = this.settingsFormationPreview.querySelector('.preview-field-green');
         if (!container) return;
 
-        // Use SVG for precise aspect ratio scaling
+        // Runtime migration for formation data
+        if (!formation.migrated && formation.players && formation.players.some(p => (p.x > 100 || p.y > 70))) {
+            formation.players.forEach(p => {
+                p.x = p.x / 10;
+                p.y = p.y / 10;
+            });
+            formation.migrated = true;
+        }
+
+        // Use SVG with percentage viewBox
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("viewBox", "0 0 1000 700");
+        svg.setAttribute("viewBox", "0 0 100 70"); // Percentage coordinates
         svg.setAttribute("width", "100%");
         svg.setAttribute("height", "100%");
-        svg.setAttribute("preserveAspectRatio", "xMidYMid meet"); // Scale down to fit, maintain ratio
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
         svg.style.cursor = 'pointer';
 
-        // Draw Field
+        // Draw Field (uses percentage system)
         this.drawFieldOnSVG(svg);
 
         // Draw Players
@@ -811,11 +839,11 @@ export class UI {
             const circle = document.createElementNS(svgNS, "circle");
             circle.setAttribute("cx", p.x);
             circle.setAttribute("cy", p.y);
-            circle.setAttribute("r", "20");
+            circle.setAttribute("r", "1.944"); // Match current player size
 
-            circle.setAttribute("fill", p.color || '#3b82f6'); // Use p.color directly or default
+            circle.setAttribute("fill", p.color || '#3b82f6');
             circle.setAttribute("stroke", "white");
-            circle.setAttribute("stroke-width", "2");
+            circle.setAttribute("stroke-width", "0.2");
 
             // Text Label
             const text = document.createElementNS(svgNS, "text");
@@ -824,7 +852,7 @@ export class UI {
             text.setAttribute("dy", "0.35em");
             text.setAttribute("text-anchor", "middle");
             text.setAttribute("fill", "white");
-            text.setAttribute("font-size", "14px");
+            text.setAttribute("font-size", "1.4");
             text.setAttribute("font-family", "Inter, sans-serif");
             text.setAttribute("font-weight", "600");
             text.textContent = p.label || '';
@@ -845,6 +873,7 @@ export class UI {
         `;
         container.appendChild(overlay);
     }
+
     showSnackbar(message, duration = 3000) {
         const snackbar = document.getElementById('snackbar');
         if (!snackbar) return;
@@ -1106,7 +1135,9 @@ export class UI {
         let menu = document.getElementById('floating-icon-menu');
         if (!menu) {
             // Create it if missing
-            const canvasWrapper = document.querySelector('.canvas-wrapper');
+            // Find the canvas wrapper (the div that contains the SVG)
+            const canvas = document.getElementById('play-canvas');
+            const canvasWrapper = canvas ? canvas.parentElement : null;
             if (canvasWrapper) {
                 menu = document.createElement('div');
                 menu.id = 'floating-icon-menu';
