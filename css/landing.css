@@ -157,11 +157,12 @@ header {
     background-color: var(--bg-light);
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
-    padding: 24px;
+    padding: 32px 24px;
     text-align: center;
-    color: var(--text-secondary);
-    font-weight: 500;
-    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
 }
 
 /* Features Sections */
