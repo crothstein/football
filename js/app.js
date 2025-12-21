@@ -232,6 +232,14 @@ class App {
     }
 
     bindEvents() {
+        // Prevent duplicate initialization
+        if (this._eventsInitialized) {
+            console.log('bindEvents: already initialized, skipping');
+            return;
+        }
+        this._eventsInitialized = true;
+        console.log('bindEvents: initializing event listeners');
+
         // Create Playbook (Modal "Check" button)
         const confirmBtn = document.getElementById('confirm-create-playbook');
         if (confirmBtn) {
@@ -258,13 +266,22 @@ class App {
         // Navigation & Dropdown
         const dropdown = document.getElementById('playbook-dropdown-menu');
 
-        if (switchBtn && dropdown) {
-            switchBtn.addEventListener('click', (e) => {
+        if (switchBtn && dropdown && !this._dropdownInitialized) {
+            this._dropdownInitialized = true; // Prevent duplicate initialization
+
+            switchBtn.addEventListener('click', async (e) => {
                 e.stopPropagation(); // Prevent closing immediately
-                dropdown.classList.toggle('hidden');
-                // Refresh list when opening
-                if (!dropdown.classList.contains('hidden')) {
-                    this.ui.renderPlaybookDropdownItems();
+                const isHidden = dropdown.classList.contains('hidden');
+
+                if (isHidden) {
+                    // Render items FIRST, then show dropdown
+                    console.log('Dropdown: rendering items before showing...');
+                    await this.ui.renderPlaybookDropdownItems();
+                    dropdown.classList.remove('hidden');
+                    console.log('Dropdown: shown');
+                } else {
+                    dropdown.classList.add('hidden');
+                    console.log('Dropdown: hidden');
                 }
             });
 
@@ -473,8 +490,8 @@ class App {
             logoutBtn.addEventListener('click', async () => {
                 try {
                     await this.auth.logout();
-                    alert('Logged out successfully.');
-                    window.location.reload(); // Reload to clear state and show Auth view
+                    // Don't show message, just reload to show auth page
+                    window.location.reload();
                 } catch (err) {
                     alert('Error logging out: ' + err.message);
                 }

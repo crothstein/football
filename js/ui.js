@@ -1,5 +1,6 @@
 import { getFormations } from './formations.js';
 import { PrintModule } from './print.js';
+import { supabase } from './supabase.js';
 
 export class UI {
     constructor(store, app) {
@@ -269,6 +270,36 @@ export class UI {
                 }
             });
         });
+
+        // --- Sharing Event Listeners ---
+        const toggleShareFormBtn = document.getElementById('toggle-share-form-btn');
+        if (toggleShareFormBtn) {
+            toggleShareFormBtn.onclick = () => this.toggleShareForm();
+        }
+
+        const cancelShareBtn = document.getElementById('cancel-share-btn');
+        if (cancelShareBtn) {
+            cancelShareBtn.onclick = () => this.toggleShareForm();
+        }
+
+        const sendShareBtn = document.getElementById('send-share-btn');
+        if (sendShareBtn) {
+            sendShareBtn.onclick = () => this.handleSharePlaybook();
+        }
+
+        // Permission toggle within share form
+        const sharePermBtns = document.querySelectorAll('#share-form-container .segment-btn[data-permission]');
+        sharePermBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                sharePermBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        const copyPlaybookBtn = document.getElementById('btn-copy-playbook');
+        if (copyPlaybookBtn) {
+            copyPlaybookBtn.onclick = () => this.handleCopyPlaybook();
+        }
     }
 
     async renderCreatePlaybookView() {
@@ -308,34 +339,60 @@ export class UI {
         const listEl = document.getElementById('dropdown-playbook-list');
         if (!listEl) return;
 
-        const playbooks = await this.store.getPlaybooks();
-        listEl.innerHTML = '';
+        // Prevent concurrent calls
+        if (this._renderingDropdown) {
+            console.log('renderPlaybookDropdownItems: already rendering, skipping');
+            return;
+        }
 
-        const currentId = this.app.currentPlaybook ? this.app.currentPlaybook.id : null;
+        this._renderingDropdown = true;
+        console.log('renderPlaybookDropdownItems: starting render');
 
-        playbooks.forEach(pb => {
-            const btn = document.createElement('button');
-            btn.className = `dropdown-item ${pb.id === currentId ? 'active' : ''}`;
+        try {
+            const playbooks = await this.store.getPlaybooks();
+            listEl.innerHTML = '';
 
-            // Create dot indicator
-            const dot = document.createElement('span');
-            dot.className = 'dot-indicator';
-            dot.style.visibility = pb.id === currentId ? 'visible' : 'hidden';
-            dot.textContent = '●';
+            const currentId = this.app.currentPlaybook ? this.app.currentPlaybook.id : null;
 
-            const text = document.createElement('span');
-            text.textContent = pb.name;
+            playbooks.forEach(pb => {
+                const btn = document.createElement('button');
+                btn.className = `dropdown-item ${pb.id === currentId ? 'active' : ''}`;
 
-            btn.appendChild(dot);
-            btn.appendChild(text);
+                // Create dot indicator
+                const dot = document.createElement('span');
+                dot.className = 'dot-indicator';
+                dot.style.visibility = pb.id === currentId ? 'visible' : 'hidden';
+                dot.textContent = '●';
 
-            btn.onclick = () => {
-                this.app.openPlaybook(pb.id);
-                document.getElementById('playbook-dropdown-menu').classList.add('hidden');
-            };
+                const text = document.createElement('span');
+                text.textContent = pb.name;
 
-            listEl.appendChild(btn);
-        });
+                btn.appendChild(dot);
+                btn.appendChild(text);
+
+                // Add shared indicator if not owner
+                if (pb.isOwner === false) {
+                    const sharedIcon = document.createElement('span');
+                    sharedIcon.textContent = ' ⬤';  // Simple dot indicator
+                    sharedIcon.style.marginLeft = '0.5rem';
+                    sharedIcon.style.color = '#9ca3af';  // gray-400
+                    sharedIcon.style.fontSize = '0.5rem';
+                    sharedIcon.title = `Shared with you (${pb.sharedPermission})`;
+                    btn.appendChild(sharedIcon);
+                }
+
+                btn.onclick = () => {
+                    this.app.openPlaybook(pb.id);
+                    document.getElementById('playbook-dropdown-menu').classList.add('hidden');
+                };
+
+                listEl.appendChild(btn);
+            });
+
+            console.log('renderPlaybookDropdownItems: completed, rendered', playbooks.length, 'playbooks');
+        } finally {
+            this._renderingDropdown = false;
+        }
     }
 
     renderFormationOptions(teamSize) {
@@ -502,6 +559,22 @@ export class UI {
             adminContainer.style.display = 'none';
         }
 
+        // Hide delete button for non-owners
+        // Check if current user is the owner by comparing owner_id
+        const deletePlaybookBtn = document.getElementById('btn-delete-playbook');
+        const isOwner = playbook.owner_id === user.id;
+        console.log('Delete button check - isOwner:', isOwner, 'playbook.owner_id:', playbook.owner_id, 'user.id:', user.id);
+
+        if (deletePlaybookBtn) {
+            if (!isOwner) {
+                console.log('Hiding delete button - user is not owner');
+                deletePlaybookBtn.style.display = 'none';
+            } else {
+                console.log('Showing delete button - user is owner');
+                deletePlaybookBtn.style.display = 'block';
+            }
+        }
+
         // Show modal
         this.settingsModal.classList.remove('hidden');
 
@@ -546,6 +619,9 @@ export class UI {
                 };
             }
         }
+
+        // Render sharing section
+        await this.renderSharingSection();
     }
 
     closePlaybookSettings() {
@@ -601,6 +677,262 @@ export class UI {
             } catch (err) {
                 console.error(err);
                 alert('Failed to delete playbook');
+            }
+        }
+    }
+
+    // --- Sharing Methods ---
+
+    async renderSharingSection() {
+        if (!this.app.currentPlaybook) return;
+
+        const playbookId = this.app.currentPlaybook.id;
+        const currentUser = await this.store.getCurrentUser();
+        const permission = await this.store.checkPlaybookPermission(playbookId);
+        const isOwner = permission === 'owner';
+
+        // Show/hide share button based on ownership
+        const toggleShareBtn = document.getElementById('toggle-share-form-btn');
+
+        if (!isOwner) {
+            if (toggleShareBtn) toggleShareBtn.style.display = 'none';
+        } else {
+            if (toggleShareBtn) toggleShareBtn.style.display = 'block';
+        }
+
+        // Render Owner - fetch playbook to get owner_id
+        const { data: playbookData } = await supabase
+            .from('playbooks')
+            .select('owner_id')
+            .eq('id', playbookId)
+            .single();
+
+        const ownerProfile = await this.store.getProfile(playbookData?.owner_id || currentUser.id);
+        const ownerNameEl = document.getElementById('owner-name');
+        if (ownerNameEl && ownerProfile) {
+            ownerNameEl.textContent = ownerProfile.full_name || ownerProfile.email;
+        }
+
+        // Fetch and render shares
+        const { shares, invitations } = await this.store.getPlaybookShares(playbookId);
+        const sharesContainer = document.getElementById('shares-container');
+        const noSharesMessage = document.getElementById('no-shares-message');
+
+        if (shares.length === 0 && invitations.length === 0) {
+            sharesContainer.innerHTML = '';
+            if (noSharesMessage) {
+                noSharesMessage.style.display = 'block';
+                sharesContainer.appendChild(noSharesMessage);
+            }
+        } else {
+            if (noSharesMessage) noSharesMessage.style.display = 'none';
+            sharesContainer.innerHTML = '';
+
+            // Render active shares
+            shares.forEach(share => {
+                const shareItem = document.createElement('div');
+                shareItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: white; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 0.5rem;';
+
+                const userInfo = document.createElement('div');
+                const userName = share.shared_with?.full_name || share.shared_with?.email || 'User';
+                const userEmail = share.shared_with?.email || '';
+                userInfo.innerHTML = `
+                    <div style="font-weight: 500;">${userName}</div>
+                    <div style="font-size: 0.85rem; color: #64748b;">${userEmail}</div>
+                `;
+
+                const controlsDiv = document.createElement('div');
+                controlsDiv.style.cssText = 'display: flex; align-items: center; gap: 0.5rem;';
+
+                if (isOwner) {
+                    const permSelect = document.createElement('select');
+                    permSelect.className = 'dark-input';
+                    permSelect.style.cssText = 'padding: 4px 8px; font-size: 0.85rem;';
+                    permSelect.innerHTML = `
+                        <option value="view" ${share.permission === 'view' ? 'selected' : ''}>View</option>
+                        <option value="edit" ${share.permission === 'edit' ? 'selected' : ''}>Edit</option>
+                    `;
+                    permSelect.onchange = async () => {
+                        await this.updateSharePermission(share.id, permSelect.value);
+                    };
+                    controlsDiv.appendChild(permSelect);
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'btn-icon-light';
+                    removeBtn.textContent = '\u2715';
+                    removeBtn.style.cssText = 'padding: 4px 8px;';
+                    removeBtn.onclick = async () => {
+                        if (confirm('Remove access for this user?')) {
+                            await this.removePlaybookShare(share.id);
+                        }
+                    };
+                    controlsDiv.appendChild(removeBtn);
+                } else {
+                    const permLabel = document.createElement('span');
+                    permLabel.style.cssText = 'padding: 4px 8px; background: #f1f5f9; border-radius: 4px; font-size: 0.85rem; font-weight: 500;';
+                    permLabel.textContent = share.permission === 'view' ? 'View Only' : 'Can Edit';
+                    controlsDiv.appendChild(permLabel);
+                }
+
+                shareItem.appendChild(userInfo);
+                shareItem.appendChild(controlsDiv);
+                sharesContainer.appendChild(shareItem);
+            });
+
+            // Render pending invitations
+            invitations.forEach(invite => {
+                const inviteItem = document.createElement('div');
+                inviteItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; margin-bottom: 0.5rem;';
+
+                const inviteInfo = document.createElement('div');
+                inviteInfo.innerHTML = `
+                    <div style="font-weight: 500;">${invite.email}</div>
+                    <div style="font-size: 0.85rem; color: #92400e;">Invited \u00b7 ${invite.permission}</div>
+                `;
+
+                const controlsDiv = document.createElement('div');
+                if (isOwner) {
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'btn-icon-light';
+                    removeBtn.textContent = '\u2715';
+                    removeBtn.style.cssText = 'padding: 4px 8px;';
+                    removeBtn.onclick = async () => {
+                        if (confirm('Cancel this invitation?')) {
+                            await this.store.removeInvitation(invite.id);
+                            await this.renderSharingSection();
+                        }
+                    };
+                    controlsDiv.appendChild(removeBtn);
+                }
+
+                inviteItem.appendChild(inviteInfo);
+                inviteItem.appendChild(controlsDiv);
+                sharesContainer.appendChild(inviteItem);
+            });
+        }
+    }
+
+    toggleShareForm() {
+        const formContainer = document.getElementById('share-form-container');
+        const emailInput = document.getElementById('share-email-input');
+
+        if (formContainer.style.display === 'none' || formContainer.style.display === '') {
+            formContainer.style.display = 'block';
+            if (emailInput) emailInput.focus();
+        } else {
+            formContainer.style.display = 'none';
+            if (emailInput) emailInput.value = '';
+            const viewBtn = document.getElementById('share-permission-view');
+            const editBtn = document.getElementById('share-permission-edit');
+            if (viewBtn) viewBtn.classList.add('active');
+            if (editBtn) editBtn.classList.remove('active');
+        }
+    }
+
+    async handleSharePlaybook() {
+        const emailInput = document.getElementById('share-email-input');
+        const email = emailInput.value.trim().toLowerCase();
+
+        if (!email || !email.includes('@')) {
+            alert('Please enter a valid email address');
+            return;
+        }
+
+        const currentUser = await this.store.getCurrentUser();
+        if (email === currentUser.email) {
+            alert('You cannot share a playbook with yourself');
+            return;
+        }
+
+        const viewBtn = document.getElementById('share-permission-view');
+        const editBtn = document.getElementById('share-permission-edit');
+        const permission = editBtn.classList.contains('active') ? 'edit' : 'view';
+
+        try {
+            const result = await this.store.sharePlaybook(
+                this.app.currentPlaybook.id,
+                email,
+                permission
+            );
+
+            if (result.type === 'share') {
+                this.showSnackbar(`Shared with ${email}`);
+            } else if (result.type === 'invitation') {
+                this.showSnackbar(`Sending invitation to ${email}...`);
+
+                // Send invitation email via Edge Function
+                try {
+                    const currentUserProfile = await this.store.getProfile(currentUser.id);
+                    const inviterName = currentUserProfile?.full_name || currentUser.email;
+
+                    const response = await supabase.functions.invoke('send-invitation', {
+                        body: {
+                            email: email,
+                            playbookName: this.app.currentPlaybook.name,
+                            inviterName: inviterName,
+                            permission: permission
+                        }
+                    });
+
+                    if (response.error) {
+                        console.error('Failed to send invitation email:', response.error);
+                        this.showSnackbar(`Invitation created but email failed to send`);
+                    } else {
+                        this.showSnackbar(`Invitation sent to ${email}`);
+                    }
+                } catch (emailError) {
+                    console.error('Email sending error:', emailError);
+                    // Don't fail the whole operation, just log it
+                    this.showSnackbar(`Invitation created (email pending)`);
+                }
+            }
+
+            this.toggleShareForm();
+            await this.renderSharingSection();
+        } catch (err) {
+            console.error('Share error:', err);
+            if (err.code === '23505') {
+                alert('This user already has access to this playbook');
+            } else {
+                alert('Failed to share playbook: ' + err.message);
+            }
+        }
+    }
+
+    async updateSharePermission(shareId, newPermission) {
+        try {
+            await this.store.updateShare(shareId, newPermission);
+            this.showSnackbar('Permission updated');
+        } catch (err) {
+            console.error('Update permission error:', err);
+            alert('Failed to update permission');
+            await this.renderSharingSection();
+        }
+    }
+
+    async removePlaybookShare(shareId) {
+        try {
+            await this.store.removeShare(shareId);
+            this.showSnackbar('Access removed');
+            await this.renderSharingSection();
+        } catch (err) {
+            console.error('Remove share error:', err);
+            alert('Failed to remove access');
+        }
+    }
+
+    async handleCopyPlaybook() {
+        if (!this.app.currentPlaybook) return;
+
+        if (confirm(`Create a copy of "${this.app.currentPlaybook.name}"?`)) {
+            try {
+                const newPlaybook = await this.store.copyPlaybook(this.app.currentPlaybook.id);
+                this.showSnackbar('Playbook copied successfully');
+                this.closePlaybookSettings();
+                await this.app.openPlaybook(newPlaybook.id);
+            } catch (err) {
+                console.error('Copy playbook error:', err);
+                alert('Failed to copy playbook');
             }
         }
     }
