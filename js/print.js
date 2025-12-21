@@ -68,7 +68,7 @@ export class PrintModule {
             // Leave margins: 0.5in all around = 48px on each side
             const pageWidth = 8.5 * 96;
             const pageHeight = 11 * 96;
-            const margin = 0.25 * 96; // Space between containers
+            const margin = 0.08 * 96; // Space between containers - reduced for less wasted space
             const usableWidth = pageWidth - (2 * margin);
             const usableHeight = pageHeight - (2 * margin);
 
@@ -94,7 +94,7 @@ export class PrintModule {
                 wristbandContainer.style.width = `${containerWidth}px`;
                 wristbandContainer.style.height = `${containerHeight}px`;
                 wristbandContainer.style.display = 'grid';
-                wristbandContainer.style.border = '2px dashed #999';
+                wristbandContainer.style.border = '1px dashed #999';
                 wristbandContainer.style.margin = `${margin}px`;
                 wristbandContainer.style.boxSizing = 'border-box';
 
@@ -164,7 +164,7 @@ export class PrintModule {
             item.style.height = '100%';
             item.style.border = '1px dashed #ccc'; // Dashed borders for cutting
             item.style.boxSizing = 'border-box';
-            item.style.padding = '4px'; // Padding to prevent cutoff
+            item.style.padding = '1px'; // Minimal padding
             item.style.fontSize = '8px'; // Smaller font for wristbands
         } else {
             // Playbook Mode: Grid based on counts
@@ -177,7 +177,7 @@ export class PrintModule {
             item.style.width = `${wPercent}%`;
             item.style.height = `${hPercent}%`;
             item.style.border = '1px solid #ddd';
-            item.style.padding = '4px'; // Reduced from 8px for better space utilization
+            item.style.padding = '2px'; // Minimal padding for playbook mode
             item.style.boxSizing = 'border-box';
         }
 
@@ -192,10 +192,10 @@ export class PrintModule {
         // Add wristband-specific styling
         if (layoutType === 'wristband') {
             header.style.fontSize = '6px';
-            header.style.padding = '1px 4px'; // Reduced horizontal padding from left/right
-            header.style.height = '12px';
-            header.style.minHeight = '12px';
-            header.style.maxHeight = '12px';
+            header.style.padding = '1px 2px'; // Minimal padding
+            header.style.height = '10px';
+            header.style.minHeight = '10px';
+            header.style.maxHeight = '10px';
             header.style.lineHeight = '1';
             header.style.overflow = 'hidden';
             header.style.whiteSpace = 'nowrap';

@@ -340,11 +340,11 @@ def generate_collection_page(fmt, playbook):
         play_slug = slugify(play['name'])
         play_cards += f"""
         <a href="/play-templates/{fmt}/{pb_slug}/{play_slug}/" class="play-card-static">
-            <div class="play-preview">
-                {generate_svg(play)}
-            </div>
             <div class="play-info">
                 <h3>{play['name']}</h3>
+            </div>
+            <div class="play-preview">
+                {generate_svg(play)}
             </div>
         </a>
         """

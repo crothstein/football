@@ -208,11 +208,11 @@ function generateCollectionPage(format, playbook) {
         <section class="plays-masonry container">
             ${plays.map(play => `
                 <a href="/play-templates/${format}/${pbSlug}/${slugify(play.name)}" class="play-card-static">
-                    <div class="play-preview">
-                        ${generateSVG(play)}
-                    </div>
                     <div class="play-info">
                         <h3>${play.name}</h3>
+                    </div>
+                    <div class="play-preview">
+                        ${generateSVG(play)}
                     </div>
                 </a>
             `).join('')}

@@ -160,13 +160,15 @@
 }
 
 .play-info {
-    padding: 15px;
+    padding: 0.5rem;
+    background: #64748b;
+    color: white;
 }
 
 .play-info h3 {
     margin: 0;
     font-size: 1rem;
-    color: #1f2937;
+    color: inherit;
 }
 
 /* Detail Layout */

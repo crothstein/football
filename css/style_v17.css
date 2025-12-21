@@ -1021,12 +1021,14 @@ body {
 }
 
 .play-card-info {
-    padding: 1rem;
+    padding: 0.5rem;
+    background: #64748b;
+    color: white;
 }
 
 .play-name {
     font-weight: 600;
-    color: var(--text-main);
+    color: inherit;
     margin-bottom: 0.25rem;
 }
 
@@ -1095,7 +1097,7 @@ body {
 
 .play-number {
     font-weight: 700;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.7);
     margin-right: 0.5rem;
 }
 
@@ -2113,7 +2115,7 @@ body {
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
-        padding: 4px;
+        padding: 1px;
         position: relative;
         overflow: visible;
         /* Changed from hidden to prevent cutoff */
@@ -2136,12 +2138,12 @@ body {
         /* Dark gray background - force override */
         color: white !important;
         /* White text - force override */
-        padding: 2px 0;
+        padding: 1px 0;
         flex-shrink: 0;
         display: flex;
         justify-content: space-between;
-        padding-left: 5px;
-        padding-right: 5px;
+        padding-left: 2px;
+        padding-right: 2px;
         border-bottom: 1px solid #374151;
         /* Slightly darker border */
         -webkit-print-color-adjust: exact !important;
@@ -2152,9 +2154,9 @@ body {
         /* Force background colors in print */
     }
 
-    /* Ensure wristband containers have more padding to prevent overflow */
+    /* Ensure wristband containers have minimal padding */
     .wristband-container .print-item {
-        padding: 10px !important;
+        padding: 1px !important;
         overflow: hidden !important;
         /* Clip content that extends beyond bounds */
     }
