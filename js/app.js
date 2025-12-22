@@ -497,6 +497,57 @@ class App {
                 }
             });
         }
+
+        // Mobile Controls
+        const mobilePlaybookBtn = document.getElementById('mobile-playbook-btn');
+        const mobileSettingsBtn = document.getElementById('mobile-settings-btn');
+        const mobileUserBtn = document.getElementById('mobile-user-btn');
+        const mobilePrintBtn = document.getElementById('mobile-print-btn');
+        const mobileNewPlayBtn = document.getElementById('mobile-new-play-btn');
+
+        // Mobile playbook selector - triggers same dropdown as desktop
+        if (mobilePlaybookBtn && dropdown) {
+            mobilePlaybookBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const isHidden = dropdown.classList.contains('hidden');
+
+                if (isHidden) {
+                    await this.ui.renderPlaybookDropdownItems();
+                    dropdown.classList.remove('hidden');
+                } else {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        }
+
+        // Mobile settings button
+        if (mobileSettingsBtn) {
+            mobileSettingsBtn.addEventListener('click', () => {
+                this.ui.openPlaybookSettings();
+            });
+        }
+
+        // Mobile print button
+        if (mobilePrintBtn) {
+            mobilePrintBtn.addEventListener('click', () => {
+                this.ui.openPrintModal();
+            });
+        }
+
+        // Mobile new play button
+        if (mobileNewPlayBtn) {
+            mobileNewPlayBtn.addEventListener('click', () => {
+                if (this.checkUnsavedChanges()) this.handleNewPlay();
+            });
+        }
+
+        // Mobile user button - shows user menu
+        if (mobileUserBtn && userMenu) {
+            mobileUserBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userMenu.classList.toggle('hidden');
+            });
+        }
     }
 
     switchView(viewName) {
@@ -552,6 +603,10 @@ class App {
             // Update Header/Sidebar Names
             if (this.ui.currentPlaybookNameEl) this.ui.currentPlaybookNameEl.textContent = this.currentPlaybook.name;
             if (this.ui.headerPlaybookName) this.ui.headerPlaybookName.textContent = this.currentPlaybook.name;
+
+            // Update mobile playbook name
+            const mobilePlaybookName = document.getElementById('mobile-playbook-name');
+            if (mobilePlaybookName) mobilePlaybookName.textContent = this.currentPlaybook.name;
         }
     }
 
@@ -753,6 +808,7 @@ class App {
             formation: this.currentPlay.formation || 'Custom',
             players: JSON.parse(JSON.stringify(sourceData.players)), // Deep copy
             routes: JSON.parse(JSON.stringify(sourceData.routes)),   // Deep copy
+            icons: JSON.parse(JSON.stringify(sourceData.icons || [])), // Deep copy icons
             order: maxOrder + 1
         };
 
