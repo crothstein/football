@@ -1113,16 +1113,29 @@ export class UI {
         // Render Players
         if (play.players) {
             play.players.forEach(p => {
-                const circle = document.createElementNS(svgNS, "circle");
-                circle.setAttribute("cx", p.x);
-                circle.setAttribute("cy", p.y);
-                circle.setAttribute("r", "1.944"); // Match new player size
-                circle.setAttribute("fill", p.color || '#3b82f6');
-                circle.setAttribute("stroke", "white");
-                circle.setAttribute("stroke-width", "0.2");
-                svg.appendChild(circle);
+                if (p.isPrimary) {
+                    // Render Star for primary player
+                    const polygon = document.createElementNS(svgNS, "polygon");
+                    const points = this._calculateStarPointsForPreview(p.x, p.y, 5, 1.944, 0.972);
+                    polygon.setAttribute("points", points);
+                    polygon.setAttribute("stroke", p.color || '#3b82f6');
+                    polygon.setAttribute("stroke-width", "0.3");
+                    polygon.setAttribute("fill", p.color || '#3b82f6');
+                    polygon.setAttribute("fill-opacity", "1");
+                    svg.appendChild(polygon);
+                } else {
+                    // Render Circle for regular player
+                    const circle = document.createElementNS(svgNS, "circle");
+                    circle.setAttribute("cx", p.x);
+                    circle.setAttribute("cy", p.y);
+                    circle.setAttribute("r", "1.944"); // Match new player size
+                    circle.setAttribute("fill", p.color || '#3b82f6');
+                    circle.setAttribute("stroke", "white");
+                    circle.setAttribute("stroke-width", "0.2");
+                    svg.appendChild(circle);
+                }
 
-                // Simplified Label (maybe too small for card preview? Keep standard size 14)
+                // Label (same for both star and circle)
                 const text = document.createElementNS(svgNS, "text");
                 text.setAttribute("x", p.x);
                 text.setAttribute("y", p.y);
@@ -1198,6 +1211,28 @@ export class UI {
         }
 
         return d;
+    }
+
+    _calculateStarPointsForPreview(cx, cy, spikes = 5, outerRadius = 1.944, innerRadius = 0.972) {
+        // Same logic as editor.calculateStarPoints but for preview rendering
+        let rot = Math.PI / 2 * 3;
+        let x = cx;
+        let y = cy;
+        let step = Math.PI / spikes;
+        let str = "";
+
+        for (let i = 0; i < spikes; i++) {
+            x = cx + Math.cos(rot) * outerRadius;
+            y = cy + Math.sin(rot) * outerRadius;
+            str += x.toFixed(2) + "," + y.toFixed(2) + " ";
+            rot += step;
+
+            x = cx + Math.cos(rot) * innerRadius;
+            y = cy + Math.sin(rot) * innerRadius;
+            str += x.toFixed(2) + "," + y.toFixed(2) + " ";
+            rot += step;
+        }
+        return str;
     }
 
     renderSettingsFormationPreview(formation) {
