@@ -1071,6 +1071,12 @@ export class UI {
                         const endPt = p.route[i];
                         const style = styles[i] || 'solid';
 
+                        // Variables for line endpoints (needed for curves too)
+                        let lineStartX = startPt.x;
+                        let lineStartY = startPt.y;
+                        let lineEndX = endPt.x;
+                        let lineEndY = endPt.y;
+
                         let element;
 
                         if (style === 'wavy' || style === 'squiggly') {
@@ -1080,10 +1086,6 @@ export class UI {
                             element.setAttribute("d", d);
                         } else {
                             // Calculate shortened segment for rounded cuts
-                            let lineStartX = startPt.x;
-                            let lineStartY = startPt.y;
-                            let lineEndX = endPt.x;
-                            let lineEndY = endPt.y;
 
                             if (cutType === 'rounded') {
                                 // Shorten segment start if not first segment
@@ -1135,8 +1137,8 @@ export class UI {
 
                         svg.appendChild(element);
 
-                        // Add curve between segments for rounded cuts
-                        if (cutType === 'rounded' && i < p.route.length - 1) {
+                        // Add curve between segments for rounded cuts (skip for wavy)
+                        if (cutType === 'rounded' && i < p.route.length - 1 && style !== 'wavy' && style !== 'squiggly') {
                             const nextPt = p.route[i + 1];
                             const distNext = Math.hypot(nextPt.x - endPt.x, nextPt.y - endPt.y);
                             const rNext = Math.min(radius, distNext / 2);
