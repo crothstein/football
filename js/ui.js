@@ -1142,8 +1142,11 @@ export class UI {
                             const rNext = Math.min(radius, distNext / 2);
                             const angleNext = Math.atan2(nextPt.y - endPt.y, nextPt.x - endPt.x);
 
-                            const curveStartX = endPt.x - Math.cos(Math.atan2(endPt.y - startPt.x, endPt.x - startPt.x)) * Math.min(radius, Math.hypot(endPt.x - startPt.x, endPt.y - startPt.y) / 2);
-                            const curveStartY = endPt.y - Math.sin(Math.atan2(endPt.y - startPt.y, endPt.x - startPt.x)) * Math.min(radius, Math.hypot(endPt.x - startPt.x, endPt.y - startPt.y) / 2);
+                            // Curve starts at the end of the shortened line segment
+                            const curveStartX = lineEndX;
+                            const curveStartY = lineEndY;
+
+                            // Curve ends at the start of the next segment
                             const curveEndX = endPt.x + Math.cos(angleNext) * rNext;
                             const curveEndY = endPt.y + Math.sin(angleNext) * rNext;
 
