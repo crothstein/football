@@ -1063,7 +1063,7 @@ export class UI {
                     const colorHex = (p.color || '#1f2937').replace('#', '');
                     const endType = p.routeEndType || 'arrow';
                     const cutType = p.routeCutType || 'hard';
-                    const radius = 1.2; // Curve radius for rounded cuts (scaled for percentage)
+                    const radius = 2.0; // Curve radius for rounded cuts (match editor)
 
                     // Render each segment individually
                     for (let i = 0; i < p.route.length; i++) {
