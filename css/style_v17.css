@@ -960,7 +960,7 @@ body {
     display: flex;
     flex-direction: column;
     background: var(--bg-app);
-    overflow: hidden;
+    overflow: auto;
 }
 
 .overview-header {
@@ -996,6 +996,7 @@ body {
     overflow: hidden;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
+    min-height: 250px;
 }
 
 .play-card:hover {
@@ -2159,5 +2160,247 @@ body {
         padding: 1px !important;
         overflow: hidden !important;
         /* Clip content that extends beyond bounds */
+    }
+}
+/* ============================================
+   MOBILE RESPONSIVE LAYOUT
+   ============================================ */
+
+/* Mobile Top Bar - Hidden by default, shown on mobile */
+.mobile-top-bar {
+    display: none;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.mobile-playbook-selector {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: #f1f5f9;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    min-height: 44px;
+}
+
+.mobile-playbook-selector:active {
+    background: #e2e8f0;
+}
+
+.mobile-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.mobile-icon-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-icon-btn:active {
+    background: #f1f5f9;
+}
+
+.mobile-user-button {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.mobile-user-button:active {
+    background: #f1f5f9;
+}
+
+.user-avatar-small {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Mobile Media Query - 768px and below */
+@media (max-width: 768px) {
+    /* Hide desktop sidebar */
+    .sidebar-left.modern-sidebar {
+        display: none;
+    }
+
+    /* Show mobile top bar */
+    .mobile-top-bar {
+        display: flex;
+    }
+
+    /* Main content takes full width */
+    .main-content-area {
+        width: 100%;
+    }
+
+    /* Adjust overview header for mobile */
+    .overview-header {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: flex-start;
+    }
+
+    .header-title-area h1 {
+        font-size: 1.25rem;
+    }
+
+    .header-actions-right {
+        display: flex;
+        gap: 0.5rem;
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    /* Adjust grid for tablets */
+    .plays-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        padding: 1rem;
+        gap: 1rem;
+    }
+}
+
+/* Extra small screens - phones */
+@media (max-width: 480px) {
+    /* Single column layout for phones */
+    .plays-grid {
+        grid-template-columns: 1fr;
+        padding: 0.75rem;
+    }
+
+    /* Smaller header on phones */
+    .overview-header {
+        padding: 1rem;
+    }
+
+    .header-title-area h1 {
+        font-size: 1.1rem;
+    }
+
+    /* Hide "New Play" button text on very small screens */
+    #header-new-play-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    /* Adjust play card for better mobile viewing */
+    .play-card {
+        min-height: 220px;
+    }
+
+    /* Mobile top bar adjustments */
+    .mobile-top-bar {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .mobile-playbook-selector {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+/* Shared Dropdown Menus - Position correctly for both desktop and mobile */
+#playbook-dropdown-menu {
+    position: fixed;
+    z-index: 100;
+}
+
+#user-menu {
+    position: fixed;
+    z-index: 100;
+}
+
+/* Desktop: Position dropdowns relative to sidebar buttons */
+@media (min-width: 769px) {
+    #playbook-dropdown-menu {
+        top: 180px;
+        left: 20px;
+        width: 220px;
+    }
+    
+    #user-menu {
+        bottom: 70px;
+        left: 20px;
+        width: 220px;
+    }
+}
+
+/* Mobile: Position dropdowns relative to mobile top bar */
+@media (max-width: 768px) {
+    #playbook-dropdown-menu {
+        top: 65px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+    }
+    
+    #user-menu {
+        top: 65px;
+        right: 10px;
+        width: 200px;
+    }
+    
+    /* Hide desktop header on mobile */
+    .overview-header {
+        display: none;
+    }
+    
+    /* Mobile new play button styling */
+    .mobile-new-play {
+        white-space: nowrap;
+    }
+}
+
+/* Fix view container flex direction on mobile */
+@media (max-width: 768px) {
+    #view-playbook-overview {
+        flex-direction: column !important;
+    }
+}
+
+/* Fix user menu positioning on mobile */
+@media (max-width: 768px) {
+    #user-menu {
+        top: 65px;
+        right: 10px;
+        left: auto;
+        width: 200px;
+        background: white;
+        border: 1px solid var(--border);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 }

@@ -389,16 +389,6 @@
                     <span id="current-playbook-name">Vikings 3/4</span>
                     <span class="chevron">▾</span>
                 </button>
-                <!-- Dropdown Menu -->
-                <div id="playbook-dropdown-menu" class="dropdown-menu hidden">
-                    <div id="dropdown-playbook-list">
-                        <!-- Playbook items will be injected here -->
-                    </div>
-                    <div class="dropdown-divider"></div>
-                    <button id="dropdown-new-playbook" class="dropdown-item create-new">
-                        <span>+</span> New Playbook
-                    </button>
-                </div>
             </div>
 
             <div class="sidebar-menu hidden">
@@ -424,12 +414,52 @@
                         <span class="user-email" id="display-user-email">coach@team.com</span>
                     </div>
                 </div>
-                <!-- Popover Menu -->
-                <div id="user-menu" class="user-menu hidden">
-                    <button id="btn-logout" class="menu-item danger">Log Out</button>
-                </div>
             </div>
         </aside>
+
+        <!-- Shared Dropdown Menus (visible to both desktop and mobile) -->
+        <div id="playbook-dropdown-menu" class="dropdown-menu hidden">
+            <div id="dropdown-playbook-list">
+                <!-- Playbook items will be injected here -->
+            </div>
+            <div class="dropdown-divider"></div>
+            <button id="dropdown-new-playbook" class="dropdown-item create-new">
+                <span>+</span> New Playbook
+            </button>
+        </div>
+
+        <div id="user-menu" class="user-menu hidden">
+            <button id="btn-logout" class="menu-item danger">Log Out</button>
+        </div>
+
+        <!-- Mobile Top Bar (visible only on small screens) -->
+        <div class="mobile-top-bar">
+            <button id="mobile-playbook-btn" class="mobile-playbook-selector">
+                <span class="dot-indicator">●</span>
+                <span id="mobile-playbook-name">Vikings 3/4</span>
+                <span class="chevron">▾</span>
+            </button>
+            <div class="mobile-actions">
+                <button id="mobile-print-btn" class="mobile-icon-btn" title="Print" style="padding: 0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                </button>
+                <button id="mobile-settings-btn" class="mobile-icon-btn" title="Settings">
+                    ⚙
+                </button>
+                <button id="mobile-new-play-btn" class="btn-primary mobile-new-play"
+                    style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
+                    + New Play
+                </button>
+                <button id="mobile-user-btn" class="mobile-user-button">
+                    <div class="user-avatar-small" id="mobile-user-avatar">HC</div>
+                </button>
+            </div>
+        </div>
 
         <!-- Main Content -->
         <div class="main-content-area light-bg">
@@ -692,7 +722,7 @@
 
     <!-- VIEW: Print Settings Modal -->
     <div id="view-print-settings" class="dark-overlay hidden">
-        <div class="modal-container settings-modal" style="max-width: 500px;">
+        <div class="modal-container settings-modal" style="max-width: 600px;">
             <div class="modal-header">
                 <h2>Print Playbook</h2>
                 <button id="close-print-modal" class="btn-icon-light">✕</button>
