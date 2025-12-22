@@ -1054,37 +1054,58 @@ export class UI {
 
         this.drawFieldOnSVG(svg);
 
-        // Render Routes
-        if (play.routes) { // routes array or reconstructed logic needed?
-            // Existing structure: play.routes is likely just array of point-arrays or linked to players?
-            // In App.saveCurrentPlay, we store players (with routes embedded? or separate?)
-            // Editor.getData returns { players, routes: [] } but players have `route` property (array of points).
-
-            // Let's iterate players to find routes
+        // Render Routes - Per Segment with Styles
+        if (play.routes) {
             const players = play.players || [];
             players.forEach(p => {
                 if (p.route && p.route.length > 0) {
-                    const polyline = document.createElementNS(svgNS, "polyline");
-                    // Construct points string
-                    let pointsStr = `${p.x},${p.y}`; // Start at player
-                    p.route.forEach(pt => pointsStr += ` ${pt.x},${pt.y}`);
-
-                    polyline.setAttribute("points", pointsStr);
-                    polyline.setAttribute("fill", "none");
-                    polyline.setAttribute("stroke", p.color || '#1f2937');
-                    polyline.setAttribute("stroke-width", "0.3"); // Scaled for percentage
-
-                    // Markers: Use unique IDs for this SVG
+                    const styles = p.routeStyles || [];
                     const colorHex = (p.color || '#1f2937').replace('#', '');
                     const endType = p.routeEndType || 'arrow';
 
-                    if (endType === 'circle') {
-                        polyline.setAttribute("marker-end", `url(#circlehead-${colorHex}-${uniqueId})`);
-                    } else {
-                        polyline.setAttribute("marker-end", `url(#arrowhead-${colorHex}-${uniqueId})`);
-                    }
+                    // Render each segment individually
+                    for (let i = 0; i < p.route.length; i++) {
+                        const startPt = (i === 0) ? { x: p.x, y: p.y } : p.route[i - 1];
+                        const endPt = p.route[i];
+                        const style = styles[i] || 'solid';
 
-                    svg.appendChild(polyline);
+                        let element;
+
+                        if (style === 'wavy' || style === 'squiggly') {
+                            // Create wavy path
+                            const d = this._createWavyPathForPreview(startPt.x, startPt.y, endPt.x, endPt.y);
+                            element = document.createElementNS(svgNS, "path");
+                            element.setAttribute("d", d);
+                        } else {
+                            // Create line segment
+                            element = document.createElementNS(svgNS, "line");
+                            element.setAttribute("x1", startPt.x);
+                            element.setAttribute("y1", startPt.y);
+                            element.setAttribute("x2", endPt.x);
+                            element.setAttribute("y2", endPt.y);
+
+                            // Apply dashed style
+                            if (style === 'dashed') {
+                                element.setAttribute("stroke-dasharray", "0.4,0.4");
+                            }
+                        }
+
+                        // Common attributes
+                        element.setAttribute("fill", "none");
+                        element.setAttribute("stroke", p.color || '#1f2937');
+                        element.setAttribute("stroke-width", "0.3");
+
+                        // Add marker only to last segment
+                        if (i === p.route.length - 1) {
+                            if (endType === 'circle') {
+                                element.setAttribute("marker-end", `url(#circlehead-${colorHex}-${uniqueId})`);
+                            } else {
+                                element.setAttribute("marker-end", `url(#arrowhead-${colorHex}-${uniqueId})`);
+                            }
+                        }
+
+                        svg.appendChild(element);
+                    }
                 }
             });
         }
@@ -1138,6 +1159,45 @@ export class UI {
         }
 
         return svg;
+    }
+
+    _createWavyPathForPreview(x1, y1, x2, y2) {
+        // Scaled version of createZigZagPath for percentage viewBox (0-100 x 0-70)
+        if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return `M 0 0`;
+
+        const dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        if (dist < 0.5) return `M ${x1} ${y1} L ${x2} ${y2}`;
+
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+
+        // Parameters scaled for percentage viewBox
+        const segmentLength = 1.5;
+        const amplitude = 0.6;
+        const steps = Math.floor(dist / segmentLength);
+
+        let d = `M ${x1} ${y1}`;
+
+        // Move along the line, adding perpendicular offsets
+        for (let i = 1; i <= steps; i++) {
+            const progress = i / steps;
+            const tx = x1 + (x2 - x1) * progress;
+            const ty = y1 + (y2 - y1) * progress;
+
+            // Alternate offset direction for zigzag
+            const offset = (i % 2 === 0) ? amplitude : -amplitude;
+
+            const wx = tx + Math.cos(angle + Math.PI / 2) * offset;
+            const wy = ty + Math.sin(angle + Math.PI / 2) * offset;
+
+            // Force end at exact destination
+            if (i === steps) {
+                d += ` L ${x2} ${y2}`;
+            } else {
+                d += ` L ${wx} ${wy}`;
+            }
+        }
+
+        return d;
     }
 
     renderSettingsFormationPreview(formation) {
