@@ -235,20 +235,38 @@ export class Editor {
                     }
 
                     children.forEach(el => {
+                        // Skip curve elements - they are just visual connectors, not actual segments
+                        if (el.dataset.segmentType === 'curve') return;
+
                         let rx, ry, style;
                         const tagName = el.tagName.toLowerCase();
                         if (tagName === 'line') {
-                            rx = parseFloat(el.getAttribute('x2'));
-                            ry = parseFloat(el.getAttribute('y2'));
+                            // For rounded routes, read from data attributes if available
+                            // This preserves original route points even when lines are visually shortened for curves
+                            if (el.dataset.routeX && el.dataset.routeY) {
+                                rx = parseFloat(el.dataset.routeX);
+                                ry = parseFloat(el.dataset.routeY);
+                            } else {
+                                // Fallback for hard routes or legacy data
+                                rx = parseFloat(el.getAttribute('x2'));
+                                ry = parseFloat(el.getAttribute('y2'));
+                            }
                             style = el.dataset.style || 'solid';
                         } else if (tagName === 'path') {
                             const d = el.getAttribute('d');
                             if (d) {
-                                const parts = d.split(' ');
-                                // Ensure we get last 2 parts which should be coords
-                                if (parts.length >= 2) {
-                                    rx = parseFloat(parts[parts.length - 2]);
-                                    ry = parseFloat(parts[parts.length - 1]);
+                                // For paths, prefer data attributes if available
+                                if (el.dataset.routeX && el.dataset.routeY) {
+                                    rx = parseFloat(el.dataset.routeX);
+                                    ry = parseFloat(el.dataset.routeY);
+                                } else {
+                                    // Fallback: parse from path d attribute
+                                    const parts = d.split(' ');
+                                    // Ensure we get last 2 parts which should be coords
+                                    if (parts.length >= 2) {
+                                        rx = parseFloat(parts[parts.length - 2]);
+                                        ry = parseFloat(parts[parts.length - 1]);
+                                    }
                                 }
                                 style = el.dataset.style || 'control'; // Should be saved now
                                 if (style === 'control' && el.getAttribute('stroke-dasharray')) style = 'dashed';
@@ -741,6 +759,9 @@ export class Editor {
                     path.setAttribute('data-style', 'squiggly');
                     path.setAttribute('stroke-linecap', 'round');
                     path.dataset.index = index;
+                    // Store original route point
+                    path.dataset.routeX = pt.x;
+                    path.dataset.routeY = pt.y;
 
                     if (isLast) {
                         if (endType === 'circle') {
@@ -761,6 +782,9 @@ export class Editor {
                     // CRITICAL FIX: Persist style
                     line.setAttribute('data-style', style);
                     line.dataset.index = index;
+                    // Store original route point
+                    line.dataset.routeX = pt.x;
+                    line.dataset.routeY = pt.y;
 
                     if (style === 'dashed') {
                         line.setAttribute('stroke-dasharray', '1,0.5'); // Scaled for percentage
@@ -823,6 +847,11 @@ export class Editor {
                 }
                 seg.setAttribute('stroke', color);
                 seg.setAttribute('stroke-width', '0.3');
+                // Store original route point for rounded routes
+                seg.dataset.routeX = pt.x;
+                seg.dataset.routeY = pt.y;
+                seg.dataset.index = i;
+                seg.dataset.style = style;
 
                 // If this is the very last segment of the route, add marker here
                 if (isLast) {
@@ -851,6 +880,8 @@ export class Editor {
                     path.setAttribute('fill', 'none');
                     path.setAttribute('stroke', color);
                     path.setAttribute('stroke-width', '0.3');
+                    // Mark as curve so getData() can filter it out
+                    path.setAttribute('data-segment-type', 'curve');
                     // Inherit style from previous segment (or solid if squiggly?)
                     if (style === 'dashed') path.setAttribute('stroke-dasharray', '0.8,0.8'); // Scaled
 
