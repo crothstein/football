@@ -209,13 +209,24 @@ export class PrintModule {
             // Playbook headers also need alignment
             header.style.display = 'flex';
             header.style.alignItems = 'center';
-            header.style.justifyContent = 'space-between';
+            header.style.gap = '4px'; // Minimal space between number and title
         }
 
-        header.innerHTML = `
-            <span>${playNumber}</span>
-            <span>${name}</span>
-        `;
+        // Create number and title spans with appropriate styling
+        const numberSpan = document.createElement('span');
+        numberSpan.textContent = playNumber;
+        numberSpan.style.minWidth = '20px'; // Fixed width for numbers under 100
+        numberSpan.style.flexShrink = '0'; // Don't shrink the number
+
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = name;
+        titleSpan.style.flex = '1'; // Take remaining space
+        titleSpan.style.overflow = 'hidden';
+        titleSpan.style.textOverflow = 'ellipsis';
+        titleSpan.style.whiteSpace = 'nowrap';
+
+        header.appendChild(numberSpan);
+        header.appendChild(titleSpan);
         item.appendChild(header);
 
         // SVG Content

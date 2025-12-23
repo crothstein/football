@@ -1031,6 +1031,9 @@ body {
     font-weight: 600;
     color: inherit;
     margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .play-meta {
@@ -2153,6 +2156,9 @@ body {
         /* Force background colors in print */
         color-adjust: exact !important;
         /* Force background colors in print */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     /* Ensure wristband containers have minimal padding */
@@ -2162,6 +2168,7 @@ body {
         /* Clip content that extends beyond bounds */
     }
 }
+
 /* ============================================
    MOBILE RESPONSIVE LAYOUT
    ============================================ */
@@ -2253,6 +2260,7 @@ body {
 
 /* Mobile Media Query - 768px and below */
 @media (max-width: 768px) {
+
     /* Hide desktop sidebar */
     .sidebar-left.modern-sidebar {
         display: none;
@@ -2296,6 +2304,7 @@ body {
 
 /* Extra small screens - phones */
 @media (max-width: 480px) {
+
     /* Single column layout for phones */
     .plays-grid {
         grid-template-columns: 1fr;
@@ -2351,7 +2360,7 @@ body {
         left: 20px;
         width: 220px;
     }
-    
+
     #user-menu {
         bottom: 70px;
         left: 20px;
@@ -2367,18 +2376,18 @@ body {
         right: 10px;
         width: auto;
     }
-    
+
     #user-menu {
         top: 65px;
         right: 10px;
         width: 200px;
     }
-    
+
     /* Hide desktop header on mobile */
     .overview-header {
         display: none;
     }
-    
+
     /* Mobile new play button styling */
     .mobile-new-play {
         white-space: nowrap;
