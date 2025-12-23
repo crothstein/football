@@ -189,7 +189,7 @@
         </div>
 
         <!-- VIEW: Playbook Settings (Modal) -->
-        <div id="view-playbook-settings" class="view-section dark-overlay hidden">
+        <div id="view-playbook-settings" class="dark-overlay hidden">
             <div class="modal-container settings-modal">
                 <div class="modal-header">
                     <h2>Playbook Settings</h2>
@@ -428,17 +428,20 @@
             </button>
         </div>
 
-        <div id="user-menu" class="user-menu hidden">
-            <button id="btn-logout" class="menu-item danger">Log Out</button>
-        </div>
-
-        <!-- Mobile Top Bar (visible only on small screens) -->
+        <!-- Top Bar (unified layout - shown on all screen sizes) -->
         <div class="mobile-top-bar">
-            <button id="mobile-playbook-btn" class="mobile-playbook-selector">
-                <span class="dot-indicator">●</span>
-                <span id="mobile-playbook-name">Vikings 3/4</span>
-                <span class="chevron">▾</span>
-            </button>
+            <div class="top-bar-left">
+                <img src="images/logo.png" alt="FlagSketch" class="top-bar-logo">
+                <div class="playbook-title-selector" id="playbook-title-btn">
+                    <h1 id="mobile-playbook-name" class="playbook-title">Vikings 3/4</h1>
+                    <button class="playbook-dropdown-chevron" aria-label="Select Playbook">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </div>
             <div class="mobile-actions">
                 <button id="mobile-print-btn" class="mobile-icon-btn" title="Print" style="padding: 0;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -455,9 +458,22 @@
                     style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
                     + New Play
                 </button>
-                <button id="mobile-user-btn" class="mobile-user-button">
-                    <div class="user-avatar-small" id="mobile-user-avatar">HC</div>
-                </button>
+                <div class="user-button-wrapper">
+                    <button id="mobile-user-btn" class="mobile-user-button">
+                        <div class="user-avatar-small" id="mobile-user-avatar">HC</div>
+                    </button>
+                    <div id="user-menu" class="user-menu hidden">
+                        <div class="user-menu-info">
+                            <div class="user-avatar" id="menu-user-avatar">HC</div>
+                            <div class="user-details">
+                                <span class="user-name" id="menu-user-name">Coach</span>
+                                <span class="user-email" id="menu-user-email">email@example.com</span>
+                            </div>
+                        </div>
+                        <div class="menu-divider"></div>
+                        <button id="btn-logout" class="menu-item danger">Log Out</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -703,12 +719,12 @@
                 <div class="modal-section">
                     <h3>Actions</h3>
                     <div class="action-buttons-row">
-                        <button id="btn-copy-play" class="btn-secondary-outline full-width">
+                        <button type="button" id="btn-copy-play" class="btn-secondary-outline full-width">
                             Duplicate Play
                         </button>
                     </div>
                     <div class="action-buttons-row" style="margin-top: 10px;">
-                        <button id="btn-delete-play" class="btn-danger-block full-width">
+                        <button type="button" id="btn-delete-play" class="btn-danger-block full-width">
                             Delete Play
                         </button>
                     </div>
@@ -716,6 +732,22 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-primary-prof" id="save-play-settings">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal (replaces native confirm) -->
+    <div id="modal-confirm" class="dark-overlay hidden">
+        <div class="modal-container" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+                <h2 id="confirm-title">Confirm Action</h2>
+            </div>
+            <div class="modal-body" style="padding: 1rem 1.5rem;">
+                <p id="confirm-message" style="color: var(--text-muted); margin: 0;">Are you sure?</p>
+            </div>
+            <div class="modal-footer" style="justify-content: center; gap: 1rem; border-top: none; padding-top: 0;">
+                <button type="button" id="confirm-cancel" class="btn-secondary-outline">Cancel</button>
+                <button type="button" id="confirm-ok" class="btn-danger-block">Delete</button>
             </div>
         </div>
     </div>

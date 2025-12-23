@@ -360,34 +360,64 @@ class App {
         const toggleLockBtn = document.getElementById('toggle-lock-btn');
         const deletePlayBtn = document.getElementById('btn-delete-play');
 
-        // Delete Play Logic
+        // Delete Play Logic - Show custom confirm modal instead of native confirm
         if (deletePlayBtn) {
-            deletePlayBtn.addEventListener('click', async () => {
+            deletePlayBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+
                 if (!this.currentPlay) return;
 
-                const confirmDelete = confirm(`Are you sure you want to delete "${this.currentPlay.name || 'this play'}"? This action cannot be undone.`);
-                if (!confirmDelete) return;
+                // Show custom confirmation modal
+                const confirmModal = document.getElementById('modal-confirm');
+                const confirmTitle = document.getElementById('confirm-title');
+                const confirmMessage = document.getElementById('confirm-message');
+                const confirmOk = document.getElementById('confirm-ok');
+                const confirmCancel = document.getElementById('confirm-cancel');
 
-                try {
-                    await this.store.deletePlay(this.currentPlay.id);
+                if (confirmModal && confirmTitle && confirmMessage) {
+                    confirmTitle.textContent = 'Delete Play?';
+                    confirmMessage.textContent = `Are you sure you want to delete "${this.currentPlay.name || 'this play'}"? This action cannot be undone.`;
+                    confirmModal.classList.remove('hidden');
 
-                    // Update Local State: Remove play from currentPlaybook
-                    if (this.currentPlaybook && this.currentPlaybook.plays) {
-                        this.currentPlaybook.plays = this.currentPlaybook.plays.filter(p => p.id !== this.currentPlay.id);
-                    }
+                    // One-time handler for OK button
+                    const handleConfirm = async () => {
+                        confirmModal.classList.add('hidden');
+                        confirmOk.removeEventListener('click', handleConfirm);
+                        confirmCancel.removeEventListener('click', handleCancel);
 
-                    // Close the play settings modal if it's open
-                    const playSettingsModal = document.getElementById('modal-play-settings');
-                    if (playSettingsModal && !playSettingsModal.classList.contains('hidden')) {
-                        playSettingsModal.classList.add('hidden');
-                    }
+                        try {
+                            await this.store.deletePlay(this.currentPlay.id);
 
-                    // Force navigation back without checking unsaved changes (since deleted)
-                    this.hasUnsavedChanges = false;
-                    this.editor.setLocked(true); // Reset state
-                    document.getElementById('back-to-book').click();
-                } catch (err) {
-                    alert('Error deleting play: ' + err.message);
+                            // Update Local State: Remove play from currentPlaybook
+                            if (this.currentPlaybook && this.currentPlaybook.plays) {
+                                this.currentPlaybook.plays = this.currentPlaybook.plays.filter(p => p.id !== this.currentPlay.id);
+                            }
+
+                            // Close the play settings modal if it's open
+                            const playSettingsModal = document.getElementById('modal-play-settings');
+                            if (playSettingsModal && !playSettingsModal.classList.contains('hidden')) {
+                                playSettingsModal.classList.add('hidden');
+                            }
+
+                            // Force navigation back without checking unsaved changes (since deleted)
+                            this.hasUnsavedChanges = false;
+                            this.editor.setLocked(true); // Reset state
+                            document.getElementById('back-to-book').click();
+                        } catch (err) {
+                            alert('Error deleting play: ' + err.message);
+                        }
+                    };
+
+                    // One-time handler for Cancel button
+                    const handleCancel = () => {
+                        confirmModal.classList.add('hidden');
+                        confirmOk.removeEventListener('click', handleConfirm);
+                        confirmCancel.removeEventListener('click', handleCancel);
+                    };
+
+                    confirmOk.addEventListener('click', handleConfirm);
+                    confirmCancel.addEventListener('click', handleCancel);
                 }
             });
         }
@@ -499,15 +529,15 @@ class App {
         }
 
         // Mobile Controls
-        const mobilePlaybookBtn = document.getElementById('mobile-playbook-btn');
+        const playbookTitleBtn = document.getElementById('playbook-title-btn');
         const mobileSettingsBtn = document.getElementById('mobile-settings-btn');
         const mobileUserBtn = document.getElementById('mobile-user-btn');
         const mobilePrintBtn = document.getElementById('mobile-print-btn');
         const mobileNewPlayBtn = document.getElementById('mobile-new-play-btn');
 
-        // Mobile playbook selector - triggers same dropdown as desktop
-        if (mobilePlaybookBtn && dropdown) {
-            mobilePlaybookBtn.addEventListener('click', async (e) => {
+        // Playbook title selector - triggers dropdown
+        if (playbookTitleBtn && dropdown) {
+            playbookTitleBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const isHidden = dropdown.classList.contains('hidden');
 

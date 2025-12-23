@@ -1402,22 +1402,33 @@ export class UI {
         if (this.userNameEl) this.userNameEl.textContent = name;
         if (this.userEmailEl) this.userEmailEl.textContent = email;
 
-        // Update Avatar
+        // Calculate Initials
+        const initials = name
+            .split(' ')
+            .map(n => n[0])
+            .slice(0, 2)
+            .join('')
+            .toUpperCase() || 'HC';
+
+        // Update Sidebar Avatar
         if (this.userAvatarEl) {
-            // If image URL exists
-            // const avatarUrl = user.user_metadata?.avatar_url;
-            // if (avatarUrl) { ... } else { ... }
-
-            // Using Initials
-            const initials = name
-                .split(' ')
-                .map(n => n[0])
-                .slice(0, 2)
-                .join('')
-                .toUpperCase() || 'HC';
-
             this.userAvatarEl.textContent = initials;
         }
+
+        // Update Mobile/Top Bar Avatar
+        const mobileAvatar = document.getElementById('mobile-user-avatar');
+        if (mobileAvatar) {
+            mobileAvatar.textContent = initials;
+        }
+
+        // Update User Menu Info
+        const menuAvatar = document.getElementById('menu-user-avatar');
+        const menuName = document.getElementById('menu-user-name');
+        const menuEmail = document.getElementById('menu-user-email');
+
+        if (menuAvatar) menuAvatar.textContent = initials;
+        if (menuName) menuName.textContent = name;
+        if (menuEmail) menuEmail.textContent = email;
     }
 
     updateSidebar(player) {
