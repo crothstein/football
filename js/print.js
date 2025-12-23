@@ -185,9 +185,8 @@ export class PrintModule {
         const header = document.createElement('div');
         header.className = 'print-item-header';
 
-        // Truncate long names - shorter for wristbands
-        const maxLength = layoutType === 'wristband' ? 12 : 15;
-        const name = play.name.length > maxLength ? play.name.substring(0, maxLength - 2) + '..' : play.name;
+        // Use full name - CSS will handle truncation with text-overflow: ellipsis
+        const name = play.name;
 
         // Add wristband-specific styling
         if (layoutType === 'wristband') {
