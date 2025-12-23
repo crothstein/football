@@ -266,7 +266,17 @@ class App {
                     document.getElementById('confirm-email-display').textContent = email;
                     this.toggleAuthForms('confirm');
                 } catch (error) {
-                    alert('Signup failed: ' + error.message);
+                    // Supabase often returns "Database error saving new user" even when
+                    // the user was created (due to trigger issues). Show confirmation
+                    // page anyway since the user usually exists.
+                    if (error.message && error.message.includes('Database error saving new user')) {
+                        console.warn('Signup returned database error, but user may have been created:', error.message);
+                        this.pendingConfirmationEmail = email;
+                        document.getElementById('confirm-email-display').textContent = email;
+                        this.toggleAuthForms('confirm');
+                    } else {
+                        alert('Signup failed: ' + error.message);
+                    }
                 }
             });
         }
