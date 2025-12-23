@@ -260,27 +260,74 @@ class App {
 
                 try {
                     await this.auth.signup(email, password, name);
-                    alert('Signup successful! Check your email for confirmation link.');
-                    this.toggleAuthForms('login'); // Switch back to login
+                    // Store email for resend functionality
+                    this.pendingConfirmationEmail = email;
+                    // Show confirmation pending view
+                    document.getElementById('confirm-email-display').textContent = email;
+                    this.toggleAuthForms('confirm');
                 } catch (error) {
                     alert('Signup failed: ' + error.message);
                 }
             });
         }
 
+        // Resend confirmation email
+        const btnResend = document.getElementById('btn-resend-confirmation');
+        if (btnResend) {
+            btnResend.addEventListener('click', async () => {
+                if (!this.pendingConfirmationEmail) return;
+
+                btnResend.disabled = true;
+                btnResend.textContent = 'Sending...';
+
+                try {
+                    await this.auth.resendConfirmation(this.pendingConfirmationEmail);
+                    btnResend.textContent = 'Email Sent!';
+                    btnResend.classList.add('btn-resend-success');
+
+                    // Reset button after 3 seconds
+                    setTimeout(() => {
+                        btnResend.textContent = 'Resend Confirmation Email';
+                        btnResend.classList.remove('btn-resend-success');
+                        btnResend.disabled = false;
+                    }, 3000);
+                } catch (error) {
+                    btnResend.textContent = 'Resend Confirmation Email';
+                    btnResend.disabled = false;
+                    alert('Failed to resend email: ' + error.message);
+                }
+            });
+        }
+
+        // Back to login from confirmation view
+        const linkConfirmToLogin = document.getElementById('link-confirm-to-login');
+        if (linkConfirmToLogin) {
+            linkConfirmToLogin.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleAuthForms('login');
+            });
+        }
+
         this.bindEvents();
     }
 
-    // Toggle between Login and Signup forms
+    // Toggle between Login, Signup, and Confirmation forms
     toggleAuthForms(mode) {
         const loginForm = document.getElementById('form-login');
         const signupForm = document.getElementById('form-signup');
+        const confirmForm = document.getElementById('form-confirm-email');
 
+        // Hide all forms first
+        loginForm.classList.add('hidden');
+        signupForm.classList.add('hidden');
+        if (confirmForm) confirmForm.classList.add('hidden');
+
+        // Show the requested form
         if (mode === 'signup') {
-            loginForm.classList.add('hidden');
             signupForm.classList.remove('hidden');
+        } else if (mode === 'confirm') {
+            if (confirmForm) confirmForm.classList.remove('hidden');
         } else {
-            signupForm.classList.add('hidden');
             loginForm.classList.remove('hidden');
         }
     }

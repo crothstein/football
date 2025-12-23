@@ -49,6 +49,15 @@ export class AuthManager {
         this.user = null;
     }
 
+    async resendConfirmation(email) {
+        const { error } = await this.supabase.auth.resend({
+            type: 'signup',
+            email: email
+        });
+        if (error) throw error;
+        return true;
+    }
+
     getUser() {
         return this.user;
     }

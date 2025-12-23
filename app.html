@@ -367,6 +367,36 @@
                         Already have an account? <a href="#" id="link-to-login">Log in</a>
                     </div>
                 </div>
+
+                <!-- Email Confirmation Pending View -->
+                <div id="form-confirm-email" class="auth-form-container hidden">
+                    <div class="confirm-email-content">
+                        <div class="confirm-email-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"
+                                fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z">
+                                </path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                        </div>
+                        <h2>Check Your Email</h2>
+                        <p class="confirm-email-message">We've sent a confirmation link to:</p>
+                        <p class="confirm-email-address" id="confirm-email-display">email@example.com</p>
+                        <p class="confirm-email-instructions">Click the link in your email to activate your account. If
+                            you don't see it, check your spam folder.</p>
+
+                        <div class="confirm-email-actions">
+                            <button id="btn-resend-confirmation" class="btn-secondary-outline full-width">
+                                Resend Confirmation Email
+                            </button>
+                        </div>
+
+                        <div class="auth-toggle" style="margin-top: 24px;">
+                            <a href="#" id="link-confirm-to-login">← Back to Login</a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
