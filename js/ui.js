@@ -1072,12 +1072,6 @@ export class UI {
                             const endPt = p.route[i];
                             const style = styles[i] || 'solid';
 
-                            // Variables for line endpoints (needed for curves too)
-                            let lineStartX = startPt.x;
-                            let lineStartY = startPt.y;
-                            let lineEndX = endPt.x;
-                            let lineEndY = endPt.y;
-
                             let element;
 
                             if (style === 'wavy' || style === 'squiggly') {
