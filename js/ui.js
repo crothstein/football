@@ -699,9 +699,13 @@ export class UI {
         }
 
         try {
-            // Optimistic update
+            // Optimistic update - update all playbook name displays
             this.currentPlaybookNameEl.textContent = newName;
-            this.headerPlaybookName.textContent = newName;
+            if (this.headerPlaybookName) this.headerPlaybookName.textContent = newName;
+
+            // Also update mobile playbook name
+            const mobilePlaybookName = document.getElementById('mobile-playbook-name');
+            if (mobilePlaybookName) mobilePlaybookName.textContent = newName;
 
             await this.store.savePlaybook(playbook);
             this.closePlaybookSettings();
