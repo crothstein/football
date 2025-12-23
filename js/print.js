@@ -215,7 +215,6 @@ export class PrintModule {
         // Create number and title spans with appropriate styling
         const numberSpan = document.createElement('span');
         numberSpan.textContent = playNumber + '.'; // Add period separator like play cards
-        numberSpan.style.minWidth = '24px'; // Slightly wider for number + period
         numberSpan.style.flexShrink = '0'; // Don't shrink the number
 
         const titleSpan = document.createElement('span');
