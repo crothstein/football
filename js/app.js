@@ -145,9 +145,14 @@ class App {
         this.initEventListeners();
     }
 
-    checkUnsavedChanges() {
+    async checkUnsavedChanges() {
         if (!this.editor.isLocked) {
-            return confirm("You have unsaved changes. Are you sure you want to leave? Your changes will be lost.");
+            return await this.ui.showConfirmDialog(
+                'Unsaved Changes',
+                'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.',
+                'Leave',
+                'btn-danger-block'
+            );
         }
         return true;
     }
@@ -312,15 +317,15 @@ class App {
         // Header New Play button
         const headerNewPlay = document.getElementById('header-new-play-btn');
         if (headerNewPlay) {
-            headerNewPlay.addEventListener('click', () => {
-                if (this.checkUnsavedChanges()) this.handleNewPlay();
+            headerNewPlay.addEventListener('click', async () => {
+                if (await this.checkUnsavedChanges()) this.handleNewPlay();
             });
         }
 
         const backBtn = document.getElementById('back-to-book');
         if (backBtn) {
-            backBtn.addEventListener('click', () => {
-                if (!this.checkUnsavedChanges()) return;
+            backBtn.addEventListener('click', async () => {
+                if (!await this.checkUnsavedChanges()) return;
 
                 const wasEditingDefault = this.isEditingDefaultFormation;
                 const shouldReturn = this.returnToSettings; // Check flag
@@ -427,7 +432,7 @@ class App {
             copyPlayBtn.addEventListener('click', async () => {
                 if (!this.currentPlay || !this.currentPlaybook) return;
 
-                if (this.checkUnsavedChanges()) {
+                if (await this.checkUnsavedChanges()) {
                     // Ensure current state is saved first? Or copy from editor?
                     // Safer to copy from editor data to capture unsaved tweaks
                     const data = this.editor.getData();
@@ -566,8 +571,8 @@ class App {
 
         // Mobile new play button
         if (mobileNewPlayBtn) {
-            mobileNewPlayBtn.addEventListener('click', () => {
-                if (this.checkUnsavedChanges()) this.handleNewPlay();
+            mobileNewPlayBtn.addEventListener('click', async () => {
+                if (await this.checkUnsavedChanges()) this.handleNewPlay();
             });
         }
 

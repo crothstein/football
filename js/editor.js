@@ -1131,9 +1131,22 @@ export class Editor {
         }
     }
 
-    deleteSelected() {
+    async deleteSelected() {
         if (this.selectedPlayer) {
-            if (confirm('Delete this player?')) {
+            // Use custom confirm dialog if UI is available
+            let confirmed = true;
+            if (this.ui && this.ui.showConfirmDialog) {
+                confirmed = await this.ui.showConfirmDialog(
+                    'Delete Player?',
+                    'Delete this player?',
+                    'Delete',
+                    'btn-danger-block'
+                );
+            } else {
+                confirmed = confirm('Delete this player?');
+            }
+
+            if (confirmed) {
                 this.deletePlayer(this.selectedPlayer.id);
                 this.deselectPlayer();
             }

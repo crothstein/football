@@ -60,7 +60,58 @@ export class UI {
         this.propPlayerPreview = document.getElementById('prop-player-preview'); // Circle
         this.propPlayerLabelInput = document.getElementById('prop-player-label'); // Input
 
+        // Custom confirm modal elements
+        this.confirmModal = document.getElementById('modal-confirm');
+        this.confirmTitle = document.getElementById('confirm-title');
+        this.confirmMessage = document.getElementById('confirm-message');
+        this.confirmOk = document.getElementById('confirm-ok');
+        this.confirmCancel = document.getElementById('confirm-cancel');
+
         this.initEventListeners();
+    }
+
+    /**
+     * Shows a custom confirmation dialog (replaces native confirm() which has issues with auto-closing)
+     * @param {string} title - Dialog title
+     * @param {string} message - Dialog message
+     * @param {string} okText - Text for OK button (default: "Delete")
+     * @param {string} okClass - CSS class for OK button (default: "btn-danger-block")
+     * @returns {Promise<boolean>} - Resolves to true if confirmed, false if cancelled
+     */
+    showConfirmDialog(title, message, okText = 'Delete', okClass = 'btn-danger-block') {
+        return new Promise((resolve) => {
+            if (!this.confirmModal || !this.confirmTitle || !this.confirmMessage) {
+                // Fallback to native confirm if modal not found
+                resolve(confirm(message));
+                return;
+            }
+
+            this.confirmTitle.textContent = title;
+            this.confirmMessage.textContent = message;
+            this.confirmOk.textContent = okText;
+            this.confirmOk.className = okClass;
+            this.confirmModal.classList.remove('hidden');
+
+            const handleConfirm = () => {
+                this.confirmModal.classList.add('hidden');
+                cleanup();
+                resolve(true);
+            };
+
+            const handleCancel = () => {
+                this.confirmModal.classList.add('hidden');
+                cleanup();
+                resolve(false);
+            };
+
+            const cleanup = () => {
+                this.confirmOk.removeEventListener('click', handleConfirm);
+                this.confirmCancel.removeEventListener('click', handleCancel);
+            };
+
+            this.confirmOk.addEventListener('click', handleConfirm);
+            this.confirmCancel.addEventListener('click', handleCancel);
+        });
     }
 
     initEventListeners() {
@@ -665,7 +716,14 @@ export class UI {
     async deletePlaybookHandler() {
         if (!this.app.currentPlaybook) return;
 
-        if (confirm(`Are you sure you want to delete "${this.app.currentPlaybook.name}"? This action cannot be undone.`)) {
+        const confirmed = await this.showConfirmDialog(
+            'Delete Playbook?',
+            `Are you sure you want to delete "${this.app.currentPlaybook.name}"? This action cannot be undone.`,
+            'Delete',
+            'btn-danger-block'
+        );
+
+        if (confirmed) {
             try {
                 const id = this.app.currentPlaybook.id;
                 await this.store.deletePlaybook(id);
@@ -762,7 +820,13 @@ export class UI {
                     removeBtn.textContent = '\u2715';
                     removeBtn.style.cssText = 'padding: 4px 8px;';
                     removeBtn.onclick = async () => {
-                        if (confirm('Remove access for this user?')) {
+                        const confirmed = await this.showConfirmDialog(
+                            'Remove Access?',
+                            'Remove access for this user?',
+                            'Remove',
+                            'btn-danger-block'
+                        );
+                        if (confirmed) {
                             await this.removePlaybookShare(share.id);
                         }
                     };
@@ -797,7 +861,13 @@ export class UI {
                     removeBtn.textContent = '\u2715';
                     removeBtn.style.cssText = 'padding: 4px 8px;';
                     removeBtn.onclick = async () => {
-                        if (confirm('Cancel this invitation?')) {
+                        const confirmed = await this.showConfirmDialog(
+                            'Cancel Invitation?',
+                            'Cancel this invitation?',
+                            'Cancel Invitation',
+                            'btn-danger-block'
+                        );
+                        if (confirmed) {
                             await this.store.removeInvitation(invite.id);
                             await this.renderSharingSection();
                         }
@@ -924,7 +994,14 @@ export class UI {
     async handleCopyPlaybook() {
         if (!this.app.currentPlaybook) return;
 
-        if (confirm(`Create a copy of "${this.app.currentPlaybook.name}"?`)) {
+        const confirmed = await this.showConfirmDialog(
+            'Copy Playbook?',
+            `Create a copy of "${this.app.currentPlaybook.name}"?`,
+            'Copy',
+            'btn-primary-prof'
+        );
+
+        if (confirmed) {
             try {
                 const newPlaybook = await this.store.copyPlaybook(this.app.currentPlaybook.id);
                 this.showSnackbar('Playbook copied successfully');
