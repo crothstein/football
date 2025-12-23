@@ -1086,37 +1086,11 @@ export class UI {
                                 element = document.createElementNS(svgNS, "path");
                                 element.setAttribute("d", d);
                             } else {
-                                // Calculate shortened segment for rounded cuts
-
-                                if (cutType === 'rounded') {
-                                    // Shorten segment start if not first segment
-                                    if (i > 0) {
-                                        const prevPt = (i === 1) ? { x: p.x, y: p.y } : p.route[i - 2];
-                                        const distPrev = Math.hypot(startPt.x - prevPt.x, startPt.y - prevPt.y);
-                                        const rPrev = Math.min(radius, distPrev / 2);
-                                        const anglePrev = Math.atan2(startPt.y - prevPt.y, startPt.x - prevPt.x);
-                                        lineStartX = startPt.x - Math.cos(anglePrev) * rPrev;
-                                        lineStartY = startPt.y - Math.sin(anglePrev) * rPrev;
-                                    }
-
-                                    // Shorten segment end if not last segment
-                                    if (i < p.route.length - 1) {
-                                        const dist = Math.hypot(endPt.x - startPt.x, endPt.y - startPt.y);
-                                        const r = Math.min(radius, dist / 2);
-                                        const angle = Math.atan2(endPt.y - startPt.y, endPt.x - startPt.x);
-                                        lineEndX = startPt.x + Math.cos(angle) * (dist - r);
-                                        lineEndY = startPt.y + Math.sin(angle) * (dist - r);
-                                    }
-                                }
-
-                                // Create line segment
                                 element = document.createElementNS(svgNS, "line");
-                                element.setAttribute("x1", lineStartX);
-                                element.setAttribute("y1", lineStartY);
-                                element.setAttribute("x2", lineEndX);
-                                element.setAttribute("y2", lineEndY);
-
-                                // Apply dashed style
+                                element.setAttribute("x1", startPt.x);
+                                element.setAttribute("y1", startPt.y);
+                                element.setAttribute("x2", endPt.x);
+                                element.setAttribute("y2", endPt.y);
                                 if (style === 'dashed') {
                                     element.setAttribute("stroke-dasharray", "0.4,0.4");
                                 }
@@ -1137,35 +1111,6 @@ export class UI {
                             }
 
                             svg.appendChild(element);
-
-                            // Add curve between segments for rounded cuts (skip for wavy)
-                            if (cutType === 'rounded' && i < p.route.length - 1 && style !== 'wavy' && style !== 'squiggly') {
-                                const nextPt = p.route[i + 1];
-                                const distNext = Math.hypot(nextPt.x - endPt.x, nextPt.y - endPt.y);
-                                const rNext = Math.min(radius, distNext / 2);
-                                const angleNext = Math.atan2(nextPt.y - endPt.y, nextPt.x - endPt.x);
-
-                                // Curve starts at the end of the shortened line segment
-                                const curveStartX = lineEndX;
-                                const curveStartY = lineEndY;
-
-                                // Curve ends at the start of the next segment
-                                const curveEndX = endPt.x + Math.cos(angleNext) * rNext;
-                                const curveEndY = endPt.y + Math.sin(angleNext) * rNext;
-
-                                const curvePath = document.createElementNS(svgNS, "path");
-                                const d = `M ${curveStartX} ${curveStartY} Q ${endPt.x} ${endPt.y} ${curveEndX} ${curveEndY}`;
-                                curvePath.setAttribute("d", d);
-                                curvePath.setAttribute("fill", "none");
-                                curvePath.setAttribute("stroke", p.color || '#1f2937');
-                                curvePath.setAttribute("stroke-width", "0.3");
-
-                                if (style === 'dashed') {
-                                    curvePath.setAttribute("stroke-dasharray", "0.4,0.4");
-                                }
-
-                                svg.appendChild(curvePath);
-                            }
                         }
                     } else {
                         // Rounded corners - track current position
