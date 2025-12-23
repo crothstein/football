@@ -2137,7 +2137,7 @@ body {
     .print-item-header {
         font-size: 10pt;
         font-weight: bold;
-        text-align: center;
+        text-align: left;
         background: #4b5563 !important;
         /* Dark gray background - force override */
         color: white !important;
@@ -2145,9 +2145,10 @@ body {
         padding: 1px 0;
         flex-shrink: 0;
         display: flex;
-        justify-content: space-between;
-        padding-left: 2px;
-        padding-right: 2px;
+        justify-content: flex-start;
+        gap: 2px;
+        padding-left: 4px;
+        padding-right: 4px;
         border-bottom: 1px solid #374151;
         /* Slightly darker border */
         -webkit-print-color-adjust: exact !important;
