@@ -237,6 +237,37 @@ export class Store {
         return this._mapPlay(data);
     }
 
+    async getPublicPlayWithTeamSize(playId) {
+        // Fetch play with its playbook to get team_size
+        const { data, error } = await supabase
+            .from('plays')
+            .select(`
+                *,
+                playbook:playbooks!playbook_id (
+                    team_size
+                )
+            `)
+            .eq('id', playId)
+            .single();
+
+        if (error) {
+            console.error('Error fetching public play with team size:', error);
+            return null;
+        }
+
+        const mappedPlay = this._mapPlay(data);
+        // Add teamSize from the joined playbook
+        if (data.playbook) {
+            mappedPlay.teamSize = data.playbook.team_size;
+        } else {
+            // Fallback: try to infer from player count
+            const playerCount = mappedPlay.players?.length || 5;
+            mappedPlay.teamSize = `${playerCount}v${playerCount}`;
+        }
+
+        return mappedPlay;
+    }
+
     async deletePlay(playId) {
         const { error } = await supabase
             .from('plays')

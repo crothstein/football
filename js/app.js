@@ -29,17 +29,30 @@ class App {
     async init() {
         try {
             console.log('App initializing...');
+
+            // Check for template_id in URL FIRST (before auth check)
+            const urlParams = new URLSearchParams(window.location.search);
+            const templateId = urlParams.get('template_id');
+
             // Check Auth
             const session = await this.auth.getSession();
             if (!session) {
                 console.log('No session, switching to auth view');
-                this.switchView('auth');
-                this.initEventListeners(); // Attach login/signup listeners
 
-                // Check specific auth mode from URL (e.g. ?mode=signup)
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('mode') === 'signup') {
+                // If there's a template_id, store it for after login/signup
+                if (templateId) {
+                    console.log('Storing pending template:', templateId);
+                    localStorage.setItem('pending_template_id', templateId);
+                    // Show signup form with context
+                    this.switchView('auth');
                     this.toggleAuthForms('signup');
+                    this.ui.showSnackbar('Sign up to customize this play!');
+                } else {
+                    this.switchView('auth');
+                    // Check specific auth mode from URL (e.g. ?mode=signup)
+                    if (urlParams.get('mode') === 'signup') {
+                        this.toggleAuthForms('signup');
+                    }
                 }
 
                 this.initEventListeners(); // Attach login/signup listeners
@@ -73,62 +86,25 @@ class App {
 
         this.editor.init();
 
-        // Check for template_id in URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const templateId = urlParams.get('template_id');
+        // Check for pending template from localStorage (stored before auth)
+        let templateId = localStorage.getItem('pending_template_id');
+        if (templateId) {
+            localStorage.removeItem('pending_template_id'); // Clear it
+            console.log('Processing pending template from localStorage:', templateId);
+        } else {
+            // Check for template_id in URL as fallback
+            const urlParams = new URLSearchParams(window.location.search);
+            templateId = urlParams.get('template_id');
+        }
 
         if (templateId) {
             console.log('Loading template:', templateId);
-            try {
-                const templatePlay = await this.store.getPublicPlay(templateId);
-
-                if (templatePlay) {
-                    // We have the play data. We want to open it as a "New Play" (unsaved) 
-                    // or force the user to "Save As".
-                    // Best flow: 
-                    // 1. Ensure we have a playbook (create one if needed? or use first?)
-                    // 2. Open Editor with this data but NO ID (so it saves as new).
-
-                    // Handle Playbooks
-                    let playbooks = await this.store.getPlaybooks();
-                    if (playbooks.length === 0) {
-                        // User has no playbooks, prompt create or switch view?
-                        // For now, let's open overview/create view but MAYBE pre-fill editor?
-                        // This is tricky. Let's just load it into the editor "Transient"ly if possible.
-                        // But App structure expects `currentPlaybook`.
-                        alert("Please create a playbook first to save this template.");
-                        this.switchView('create');
-                        return;
-                    }
-
-                    this.currentPlaybook = playbooks[0]; // Default to first
-                    this.switchView('editor');
-
-                    // Prepare "Copy" of play
-                    const playCopy = {
-                        ...templatePlay,
-                        id: 'new_template_' + Date.now(),
-                        name: templatePlay.name + ' (Copy)'
-                    };
-
-                    this.currentPlay = playCopy;
-                    this.editor.setMode('play');
-                    this.editor.loadData(playCopy);
-
-                    // Update UI inputs
-                    document.getElementById('play-name').value = playCopy.name;
-                    this.editor.setLocked(false); // Let them edit immediately
-                    this.ui.showSnackbar("Template loaded! Click Save to add it to your playbook.");
-
-                    this.initEventListeners();
-                    return; // parsing template overrides default load
-                }
-            } catch (err) {
-                console.error("Error loading template:", err);
-            }
+            await this.handleTemplateFlow(templateId);
+            this.initEventListeners();
+            return;
         }
 
-        // Helper to check playbooks and route
+        // Normal flow: check playbooks and route
         console.log('Fetching playbooks...');
         const playbooks = await this.store.getPlaybooks();
         console.log('Playbooks fetched:', playbooks.length);
@@ -143,6 +119,79 @@ class App {
         }
 
         this.initEventListeners();
+    }
+
+    async handleTemplateFlow(templateId) {
+        try {
+            // 1. Fetch template play with team size
+            const templatePlay = await this.store.getPublicPlayWithTeamSize(templateId);
+
+            if (!templatePlay) {
+                console.error('Template not found:', templateId);
+                this.ui.showSnackbar('Template not found');
+                // Fall back to normal flow
+                const playbooks = await this.store.getPlaybooks();
+                if (playbooks.length > 0) {
+                    await this.openPlaybook(playbooks[0].id);
+                } else {
+                    this.switchView('create');
+                }
+                return;
+            }
+
+            const teamSize = templatePlay.teamSize || '5v5';
+            console.log('Template team size:', teamSize);
+
+            // 2. Get user's playbooks
+            let playbooks = await this.store.getPlaybooks();
+
+            // 3. Find matching playbook by team size (already sorted by updated_at desc)
+            let targetPlaybook = playbooks.find(pb => pb.teamSize === teamSize && pb.isOwner !== false);
+
+            // 4. Create playbook if none matches
+            if (!targetPlaybook) {
+                console.log('No matching playbook found, creating new one for', teamSize);
+                targetPlaybook = await this.store.savePlaybook({
+                    name: `${teamSize} Playbook`,
+                    teamSize: teamSize
+                });
+                this.ui.showSnackbar(`Created "${teamSize} Playbook" for your template!`);
+            }
+
+            // 5. Save template as new play in the target playbook
+            const newPlay = {
+                name: templatePlay.name,
+                formation: templatePlay.formation || 'Custom',
+                players: templatePlay.players || [],
+                routes: templatePlay.routes || [],
+                icons: templatePlay.icons || []
+            };
+
+            const savedPlay = await this.store.savePlay(targetPlaybook.id, newPlay);
+            console.log('Template saved as new play:', savedPlay.id);
+
+            // 6. Open the playbook and the new play
+            await this.openPlaybook(targetPlaybook.id);
+            this.openPlay(savedPlay.id);
+
+            this.ui.showSnackbar(`"${savedPlay.name}" added to your playbook!`);
+
+            // Clean up URL to remove template_id parameter
+            const url = new URL(window.location);
+            url.searchParams.delete('template_id');
+            window.history.replaceState({}, '', url);
+
+        } catch (err) {
+            console.error('Error in handleTemplateFlow:', err);
+            this.ui.showSnackbar('Error loading template: ' + err.message);
+            // Fall back to normal flow
+            const playbooks = await this.store.getPlaybooks();
+            if (playbooks.length > 0) {
+                await this.openPlaybook(playbooks[0].id);
+            } else {
+                this.switchView('create');
+            }
+        }
     }
 
     async checkUnsavedChanges() {
