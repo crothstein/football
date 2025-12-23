@@ -11,6 +11,80 @@ SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join(BASE_DIR, 'play-templates')
 
+# --- SEO Content for Format Pages ---
+SEO_CONTENT = {
+    '5v5': {
+        'heading': 'The Essentials of 5v5 Flag Football Strategy',
+        'content': '''<p>5v5 is widely considered the fastest version of flag football. Popularized by leagues like NFL Flag, this format typically eliminates contact and blocking, shifting the entire focus to speed, agility, and precise passing concepts.</p>
+        
+<h3>Offensive Formations</h3>
+<p>Because there are no offensive linemen, every player is an eligible receiver. The most successful 5v5 plays often utilize the "Spread" or "Twins" formations to stretch the defense horizontally. Since the quarterback has a limited time to throw (usually a 7-second pass clock), quick slants, drags, and crossing routes are essential.</p>
+
+<h3>Defensive Strategy</h3>
+<p>Without blocking, defenses can be aggressive. However, missing a flag pull in 5v5 often results in a touchdown. Most teams rely on a simple Zone Defense (like a 2-3 or 3-2 zone) to keep plays in front of them, forcing the offense to make small gains rather than giving up the deep ball.</p>'''
+    },
+    '6v6': {
+        'heading': 'How to Dominate in 6v6 Flag Football',
+        'content': '''<p>The 6v6 format balances the speed of 5v5 with the complexity of larger leagues. The key differentiator in 6v6 is often the rules regarding blocking and rushing. Some leagues allow "shield blocking," while others remain non-contact.</p>
+
+<h3>Key Offensive Concepts</h3>
+<p>With an extra player on the field compared to 5v5, the Center becomes a critical position. In many 6v6 playbooks, the Center is eligible to catch a pass immediately after the snap. This creates a "check-down" safety valve for the quarterback. Successful 6v6 offenses often use "Trips" formations (three receivers on one side) to overload zone defenses.</p>
+
+<h3>Managing the Rush</h3>
+<p>In 6v6, the defensive rush is often more immediate. Quarterbacks must be mobile. Designing plays with "rollouts" or "sprint-outs" allows the QB to change the launch angle and buy time against a dedicated rusher.</p>'''
+    },
+    '7v7': {
+        'heading': 'Mastering 7v7 Flag Football Tactics',
+        'content': '''<p>7v7 is the closest format to traditional tackle football, minus the tackling. It is heavily utilized for high school development and competitive adult leagues. Because there are 14 players on the field, spacing and route running precision are paramount.</p>
+
+<h3>Passing Concepts</h3>
+<p>The field can feel crowded in 7v7. To combat this, effective playbooks rely on "High-Low" reads (like the Smash or Flood concepts) that attack a single defender at two different depths. The Quarterback needs to read the Safety's position to decide whether to throw the short "under" route or the deep "over" route.</p>
+
+<h3>Defensive Coverages</h3>
+<p>7v7 allows for complex defensive schemes. You will frequently see Man-to-Man coverage with a single high safety (Cover 1) or a traditional Cover 2 Zone. Unlike smaller formats, 7v7 defenses can disguise their coverage pre-snap, making it vital for offenses to have "audible" options at the line of scrimmage.</p>'''
+    }
+}
+
+# --- Collection-Level Content (for branded/official playbooks) ---
+COLLECTION_CONTENT = {
+    'nfl-flag-2024-playbook-5v5': {
+        'logo': '',
+        'logo_local': '/images/nfl-flag-logo.png',
+        'title': 'NFL Flag 2024 Official Playbook',
+        'subtitle': 'The official 5-on-5 flag football playbook from NFL Flag',
+        'description': '''
+<div class="official-content">
+    <h2>About This Playbook</h2>
+    <p>This is the <strong>official NFL Flag 5-on-5 playbook</strong>—the same plays used by millions of young athletes in NFL Flag leagues around the world. Whether you're a beginner coach preparing for your first season or looking to refine your strategy, these plays are designed for all skill levels.</p>
+    
+    <h3>Formations Included</h3>
+    <ul class="formation-list">
+        <li><strong>Single Back</strong> — One receiver behind the quarterback, two on either side</li>
+        <li><strong>Spread</strong> — Stretch the defense horizontally with wide receiver positioning</li>
+        <li><strong>Bunch</strong> — Three receivers grouped tightly for quick releases</li>
+        <li><strong>Trips</strong> — Three receivers stacked on one side to overload zones</li>
+        <li><strong>Twins</strong> — Two receivers paired on each side</li>
+        <li><strong>I Formation</strong> — Traditional setup with stacked backfield</li>
+        <li><strong>Double Back Set</strong> — Two receivers behind the line for versatility</li>
+        <li><strong>Trips Stack / Twins Stack</strong> — Stacked variations for misdirection</li>
+        <li><strong>Single Set</strong> — Balanced formation for short and deep passes</li>
+    </ul>
+    
+    <h3>Pro Tips from NFL Flag</h3>
+    <ul>
+        <li>Always decide which receiver moves first when paths cross to avoid collisions</li>
+        <li>Practice crossing routes ahead of time to eliminate hesitation</li>
+        <li>Use corner routes as safety valve options when primary receivers are covered</li>
+        <li>Short yardage plays work well near the first down line</li>
+    </ul>
+    
+    <p class="source-note">Content adapted from <a href="https://nflflag.com/coaches/flag-football-rules/5-on-5-flag-football-playbook" target="_blank" rel="noopener">NFL Flag Official Playbook</a>.</p>
+</div>
+''',
+        'show_logo_in_cards': False
+    }
+}
+
 # --- Helper Functions ---
 
 def slugify(text):
@@ -38,14 +112,16 @@ def fetch_public_playbooks():
         print(f"Failed to fetch playbooks: {e}")
         return []
 
-def generate_head(title, description, image=None):
+def generate_head(title, description, image=None, canonical=None):
     og_image = f'<meta property="og:image" content="{image}">' if image else ''
+    canonical_tag = f'<link rel="canonical" href="{canonical}">' if canonical else ''
     return f"""
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{title} | FlagSketch</title>
         <meta name="description" content="{description}">
+        {canonical_tag}
         
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website">
@@ -69,7 +145,14 @@ def generate_nav():
                 <a href="/"><img src="/images/logo.png" alt="FlagSketch Logo"></a>
             </div>
             <nav class="nav-actions">
-                <a href="/play-templates/" class="nav-link">Flag Football Plays</a>
+                <div class="nav-dropdown">
+                    <a href="/play-templates/" class="nav-link">Flag Football Plays</a>
+                    <div class="dropdown-menu">
+                        <a href="/play-templates/5v5/">5v5 Flag Football Plays</a>
+                        <a href="/play-templates/6v6/">6v6 Flag Football Plays</a>
+                        <a href="/play-templates/7v7/">7v7 Flag Football Plays</a>
+                    </div>
+                </div>
                 <a href="/app.html" class="nav-link">Log In</a>
                 <a href="/app.html?mode=signup" class="btn-gradient">Start Sketching Free</a>
             </nav>
@@ -286,8 +369,20 @@ def generate_format_page(fmt, playbooks):
         slug = slugify(pb['title'])
         count = len(pb.get('plays', []))
         desc = pb.get('description') or 'A collection of plays designed for success.'
+        
+        # Check if this playbook has a logo (official playbook)
+        collection_data = COLLECTION_CONTENT.get(slug, {})
+        logo_url = collection_data.get('logo_local', '')
+        
+        logo_badge = ""
+        card_class = "playbook-card"
+        if logo_url:
+            logo_badge = f'<img src="{logo_url}" alt="Official" class="card-logo-badge">'
+            card_class = "playbook-card official-card"
+        
         cards += f"""
-        <a href="/play-templates/{fmt}/{slug}/" class="playbook-card">
+        <a href="/play-templates/{fmt}/{slug}/" class="{card_class}">
+            {logo_badge}
             <div class="pb-card-header">
                 <h3>{pb['title']}</h3>
                 <span class="badge">{count} Plays</span>
@@ -295,19 +390,36 @@ def generate_format_page(fmt, playbooks):
             <p>{desc}</p>
         </a>
         """
+    
+    # Get SEO content for this format
+    seo_data = SEO_CONTENT.get(fmt, {})
+    seo_section = ""
+    if seo_data:
+        seo_section = f"""
+        <section class="seo-content">
+            <div class="seo-content-inner">
+                <h2>{seo_data['heading']}</h2>
+                {seo_data['content']}
+            </div>
+        </section>
+        """
+    
+    canonical_url = f"https://flagsketch.com/play-templates/{fmt}/"
 
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
     {generate_head(
         f"Free {fmt} Flag Football Templates",
-        f"Top rated {fmt} flag football plays and strategies. Customize these templates for your team."
+        f"Top rated {fmt} flag football plays and strategies. Customize these templates for your team.",
+        None,
+        canonical_url
     )}
     <body>
         {generate_nav()}
         
         <div class="breadcrumbs">
-            <a href="/play-templates/">Templates</a> &gt; <span>{fmt}</span>
+            <a href="/">Home</a> &gt; <a href="/play-templates/">Flag Football Plays</a> &gt; <span>{fmt} Plays</span>
         </div>
 
         <section class="hero-small">
@@ -318,6 +430,8 @@ def generate_format_page(fmt, playbooks):
         <section class="playbook-grid container">
             {cards}
         </section>
+
+        {seo_section}
 
         {generate_footer()}
     </body>
@@ -334,6 +448,17 @@ def generate_collection_page(fmt, playbook):
     pb_slug = slugify(playbook['title'])
     plays = playbook.get('plays', [])
     plays.sort(key=lambda x: x.get('order_index', 0))
+    
+    # Check for collection-specific content
+    collection_data = COLLECTION_CONTENT.get(pb_slug, {})
+    
+    # Determine if this is an official/branded playbook
+    is_official = bool(collection_data)
+    custom_title = collection_data.get('title', playbook['title'])
+    custom_subtitle = collection_data.get('subtitle', 'Click any play to view details and customize.')
+    custom_description = collection_data.get('description', '')
+    show_logo = collection_data.get('show_logo_in_cards', False)
+    logo_url = collection_data.get('logo_local', '')
 
     play_cards = ""
     for play in plays:
@@ -348,6 +473,13 @@ def generate_collection_page(fmt, playbook):
             </div>
         </a>
         """
+    
+    # Build header section (with optional logo)
+    header_logo = ""
+    if is_official and logo_url:
+        header_logo = f'<img src="{logo_url}" alt="{custom_title} Logo" class="collection-logo">'
+    
+    header_class = "collection-header official" if is_official else "collection-header"
 
     html = f"""
     <!DOCTYPE html>
@@ -360,19 +492,23 @@ def generate_collection_page(fmt, playbook):
         {generate_nav()}
         
         <div class="breadcrumbs">
-            <a href="/play-templates/">Templates</a> &gt; 
-            <a href="/play-templates/{fmt}/">{fmt}</a> &gt; 
+            <a href="/">Home</a> &gt; 
+            <a href="/play-templates/">Flag Football Plays</a> &gt; 
+            <a href="/play-templates/{fmt}/">{fmt} Plays</a> &gt; 
             <span>{playbook['title']}</span>
         </div>
 
-        <section class="collection-header container">
-            <h1>{playbook['title']}</h1>
-            <p>Click any play to view details and customize.</p>
+        <section class="{header_class} container">
+            {header_logo}
+            <h1>{custom_title}</h1>
+            <p>{custom_subtitle}</p>
         </section>
 
         <section class="plays-masonry container">
             {play_cards}
         </section>
+        
+        {f'<section class="collection-content container">{custom_description}</section>' if custom_description else ''}
 
         {generate_footer()}
     </body>
@@ -402,6 +538,42 @@ def generate_detail_page(fmt, playbook, play):
             "name": "FlagSketch"
         }
     }
+    
+    breadcrumb_schema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://flagsketch.com/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Flag Football Plays",
+                "item": "https://flagsketch.com/play-templates/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 3,
+                "name": f"{fmt} Plays",
+                "item": f"https://flagsketch.com/play-templates/{fmt}/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 4,
+                "name": playbook['title'],
+                "item": f"https://flagsketch.com/play-templates/{fmt}/{pb_slug}/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 5,
+                "name": play['name']
+            }
+        ]
+    }
 
     html = f"""
     <!DOCTYPE html>
@@ -414,8 +586,9 @@ def generate_detail_page(fmt, playbook, play):
         {generate_nav()}
         
         <div class="breadcrumbs">
-            <a href="/play-templates/">Templates</a> &gt; 
-            <a href="/play-templates/{fmt}/">{fmt}</a> &gt; 
+            <a href="/">Home</a> &gt; 
+            <a href="/play-templates/">Flag Football Plays</a> &gt; 
+            <a href="/play-templates/{fmt}/">{fmt} Plays</a> &gt; 
             <a href="/play-templates/{fmt}/{pb_slug}/">{playbook['title']}</a> &gt; 
             <span>{play['name']}</span>
         </div>
@@ -444,6 +617,9 @@ def generate_detail_page(fmt, playbook, play):
 
         <script type="application/ld+json">
             {json.dumps(schema, indent=2)}
+        </script>
+        <script type="application/ld+json">
+            {json.dumps(breadcrumb_schema, indent=2)}
         </script>
 
         {generate_footer()}

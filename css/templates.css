@@ -241,3 +241,172 @@
 .btn-outline-block:hover {
     background: #f3f4f6;
 }
+
+/* SEO Content Section */
+.seo-content {
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    padding: 60px 5%;
+}
+
+.seo-content-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+.seo-content h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 24px;
+    line-height: 1.3;
+}
+
+.seo-content h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-top: 32px;
+    margin-bottom: 12px;
+}
+
+.seo-content p {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #4b5563;
+    margin-bottom: 16px;
+}
+
+/* Collection Header */
+.collection-header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    color: white;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.collection-header h1 {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    font-weight: 800;
+}
+
+.collection-header p {
+    opacity: 0.9;
+}
+
+/* Official/Branded Playbook Headers */
+.collection-header.official {
+    background: linear-gradient(180deg, #ffffff 0%, #f0f4f8 100%);
+    padding: 50px 20px;
+    color: #111827;
+    border-bottom: 3px solid #013369;
+}
+
+.collection-header.official h1 {
+    color: #013369;
+}
+
+.collection-header.official p {
+    color: #374151;
+    opacity: 1;
+}
+
+.collection-logo {
+    max-height: 100px;
+    margin-bottom: 24px;
+}
+
+/* Official Playbook Cards */
+.playbook-card.official-card {
+    position: relative;
+    border: 2px solid #013369;
+}
+
+.card-logo-badge {
+    height: 36px;
+    width: auto;
+    margin-bottom: 12px;
+    display: block;
+}
+
+/* Collection Content Section */
+.collection-content {
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    padding: 60px 5%;
+}
+
+.official-content {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+.official-content h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 16px;
+    margin-top: 0;
+}
+
+.official-content h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-top: 32px;
+    margin-bottom: 12px;
+}
+
+.official-content p {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #4b5563;
+    margin-bottom: 16px;
+}
+
+.official-content ul {
+    margin: 0 0 16px 0;
+    padding-left: 20px;
+}
+
+.official-content ul li {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #4b5563;
+    margin-bottom: 8px;
+}
+
+.formation-list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.formation-list li {
+    background: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.source-note {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.source-note a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.source-note a:hover {
+    text-decoration: underline;
+}

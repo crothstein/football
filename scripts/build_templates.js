@@ -39,13 +39,14 @@ async function fetchPublicPlaybooks() {
     return await response.json();
 }
 
-function generateHead(title, description, image) {
+function generateHead(title, description, image, canonical) {
     return `
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${title} | FlagSketch</title>
         <meta name="description" content="${description}">
+        ${canonical ? `<link rel="canonical" href="${canonical}">` : ''}
         
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website">
@@ -62,6 +63,40 @@ function generateHead(title, description, image) {
     `;
 }
 
+// --- SEO Content for Format Pages ---
+const SEO_CONTENT = {
+    '5v5': {
+        heading: 'The Essentials of 5v5 Flag Football Strategy',
+        content: `<p>5v5 is widely considered the fastest version of flag football. Popularized by leagues like NFL Flag, this format typically eliminates contact and blocking, shifting the entire focus to speed, agility, and precise passing concepts.</p>
+        
+<h3>Offensive Formations</h3>
+<p>Because there are no offensive linemen, every player is an eligible receiver. The most successful 5v5 plays often utilize the "Spread" or "Twins" formations to stretch the defense horizontally. Since the quarterback has a limited time to throw (usually a 7-second pass clock), quick slants, drags, and crossing routes are essential.</p>
+
+<h3>Defensive Strategy</h3>
+<p>Without blocking, defenses can be aggressive. However, missing a flag pull in 5v5 often results in a touchdown. Most teams rely on a simple Zone Defense (like a 2-3 or 3-2 zone) to keep plays in front of them, forcing the offense to make small gains rather than giving up the deep ball.</p>`
+    },
+    '6v6': {
+        heading: 'How to Dominate in 6v6 Flag Football',
+        content: `<p>The 6v6 format balances the speed of 5v5 with the complexity of larger leagues. The key differentiator in 6v6 is often the rules regarding blocking and rushing. Some leagues allow "shield blocking," while others remain non-contact.</p>
+
+<h3>Key Offensive Concepts</h3>
+<p>With an extra player on the field compared to 5v5, the Center becomes a critical position. In many 6v6 playbooks, the Center is eligible to catch a pass immediately after the snap. This creates a "check-down" safety valve for the quarterback. Successful 6v6 offenses often use "Trips" formations (three receivers on one side) to overload zone defenses.</p>
+
+<h3>Managing the Rush</h3>
+<p>In 6v6, the defensive rush is often more immediate. Quarterbacks must be mobile. Designing plays with "rollouts" or "sprint-outs" allows the QB to change the launch angle and buy time against a dedicated rusher.</p>`
+    },
+    '7v7': {
+        heading: 'Mastering 7v7 Flag Football Tactics',
+        content: `<p>7v7 is the closest format to traditional tackle football, minus the tackling. It is heavily utilized for high school development and competitive adult leagues. Because there are 14 players on the field, spacing and route running precision are paramount.</p>
+
+<h3>Passing Concepts</h3>
+<p>The field can feel crowded in 7v7. To combat this, effective playbooks rely on "High-Low" reads (like the Smash or Flood concepts) that attack a single defender at two different depths. The Quarterback needs to read the Safety's position to decide whether to throw the short "under" route or the deep "over" route.</p>
+
+<h3>Defensive Coverages</h3>
+<p>7v7 allows for complex defensive schemes. You will frequently see Man-to-Man coverage with a single high safety (Cover 1) or a traditional Cover 2 Zone. Unlike smaller formats, 7v7 defenses can disguise their coverage pre-snap, making it vital for offenses to have "audible" options at the line of scrimmage.</p>`
+    }
+};
+
 function generateNav() {
     return `
     <header>
@@ -70,7 +105,14 @@ function generateNav() {
                 <a href="/"><img src="/images/logo.png" alt="FlagSketch Logo"></a>
             </div>
             <nav class="nav-actions">
-                <a href="/play-templates/" class="nav-link">Templates</a>
+                <div class="nav-dropdown">
+                    <a href="/play-templates/" class="nav-link">Flag Football Plays</a>
+                    <div class="dropdown-menu">
+                        <a href="/play-templates/5v5/">5v5 Flag Football Plays</a>
+                        <a href="/play-templates/6v6/">6v6 Flag Football Plays</a>
+                        <a href="/play-templates/7v7/">7v7 Flag Football Plays</a>
+                    </div>
+                </div>
                 <a href="/app.html" class="nav-link">Log In</a>
                 <a href="/app.html?mode=signup" class="btn-gradient">Start Sketching Free</a>
             </nav>
@@ -136,18 +178,23 @@ function generateMainHub(formats) {
 }
 
 function generateFormatPage(format, playbooks) {
+    const seoData = SEO_CONTENT[format];
+    const canonicalUrl = `https://flagsketch.com/play-templates/${format}/`;
+
     const html = `
     <!DOCTYPE html>
     <html lang="en">
     ${generateHead(
         `Free ${format} Flag Football Templates`,
-        `Top rated ${format} flag football plays and strategies. Customize these templates for your team.`
+        `Top rated ${format} flag football plays and strategies. Customize these templates for your team.`,
+        null,
+        canonicalUrl
     )}
     <body>
         ${generateNav()}
         
         <div class="breadcrumbs">
-            <a href="/play-templates/">Templates</a> &gt; <span>${format}</span>
+            <a href="/">Home</a> &gt; <a href="/play-templates/">Flag Football Plays</a> &gt; <span>${format} Plays</span>
         </div>
 
         <section class="hero-small">
@@ -166,6 +213,15 @@ function generateFormatPage(format, playbooks) {
                 </a>
             `).join('')}
         </section>
+
+        ${seoData ? `
+        <section class="seo-content">
+            <div class="seo-content-inner">
+                <h2>${seoData.heading}</h2>
+                ${seoData.content}
+            </div>
+        </section>
+        ` : ''}
 
         ${generateFooter()}
     </body>
@@ -195,8 +251,9 @@ function generateCollectionPage(format, playbook) {
         ${generateNav()}
         
         <div class="breadcrumbs">
-            <a href="/play-templates/">Templates</a> &gt; 
-            <a href="/play-templates/${format}/">${format}</a> &gt; 
+            <a href="/">Home</a> &gt; 
+            <a href="/play-templates/">Flag Football Plays</a> &gt; 
+            <a href="/play-templates/${format}/">${format} Plays</a> &gt; 
             <span>${playbook.title}</span>
         </div>
 
@@ -233,20 +290,56 @@ function generateDetailPage(format, playbook, play) {
     const pbSlug = slugify(playbook.title);
     const playSlug = slugify(play.name);
 
-    // JSON-LD Schema
+    // JSON-LD Schema for CreativeWork
     const schema = {
         "@context": "https://schema.org",
         "@type": "CreativeWork",
         "name": `${play.name} - ${format} Play Template`,
         "learningResourceType": "Template",
         "genre": "Flag Football Strategy",
-        // "image": ... (Use generated image URL if we had one, for now omit or use generic)
         "description": `An editable ${format} flag football template: ${play.name}. Customize this play in FlagSketch.`,
-        "isBasedOn": `https://flagsketch.com/app.html?template_id=${play.id}`, // Deep link
+        "isBasedOn": `https://flagsketch.com/app.html?template_id=${play.id}`,
         "author": {
             "@type": "Organization",
             "name": "FlagSketch"
         }
+    };
+
+    // JSON-LD Schema for Breadcrumbs
+    const breadcrumbSchema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://flagsketch.com/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Flag Football Plays",
+                "item": "https://flagsketch.com/play-templates/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 3,
+                "name": `${format} Plays`,
+                "item": `https://flagsketch.com/play-templates/${format}/`
+            },
+            {
+                "@type": "ListItem",
+                "position": 4,
+                "name": playbook.title,
+                "item": `https://flagsketch.com/play-templates/${format}/${pbSlug}/`
+            },
+            {
+                "@type": "ListItem",
+                "position": 5,
+                "name": play.name
+            }
+        ]
     };
 
     const html = `
@@ -260,8 +353,9 @@ function generateDetailPage(format, playbook, play) {
         ${generateNav()}
         
         <div class="breadcrumbs">
-            <a href="/play-templates/">Templates</a> &gt; 
-            <a href="/play-templates/${format}/">${format}</a> &gt; 
+            <a href="/">Home</a> &gt; 
+            <a href="/play-templates/">Flag Football Plays</a> &gt; 
+            <a href="/play-templates/${format}/">${format} Plays</a> &gt; 
             <a href="/play-templates/${format}/${pbSlug}/">${playbook.title}</a> &gt; 
             <span>${play.name}</span>
         </div>
@@ -290,6 +384,9 @@ function generateDetailPage(format, playbook, play) {
 
         <script type="application/ld+json">
             ${JSON.stringify(schema, null, 2)}
+        </script>
+        <script type="application/ld+json">
+            ${JSON.stringify(breadcrumbSchema, null, 2)}
         </script>
 
         ${generateFooter()}
