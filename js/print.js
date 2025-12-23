@@ -201,7 +201,8 @@ export class PrintModule {
             header.style.whiteSpace = 'nowrap';
             header.style.display = 'flex';
             header.style.alignItems = 'center';
-            header.style.justifyContent = 'space-between';
+            header.style.justifyContent = 'flex-start';
+            header.style.gap = '2px';
             header.style.setProperty('background', '#4b5563', 'important'); // Dark gray background
             header.style.setProperty('color', 'white', 'important'); // White text
             header.style.borderBottom = '1px solid #374151';
