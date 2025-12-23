@@ -1183,7 +1183,8 @@ export class UI {
                             }
                         }
                     }
-                });
+                }
+            });
         }
 
         // Render Players
