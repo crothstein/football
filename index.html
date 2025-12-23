@@ -12,6 +12,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- Redirect to app if coming from email verification -->
+    <script>
+        // If we have an access_token in the hash, redirect to /app.html
+        if (window.location.hash && window.location.hash.includes('access_token')) {
+            window.location.replace('/app.html' + window.location.hash);
+        }
+    </script>
+
     <!-- FAQ Schema Markup -->
     <script type="application/ld+json">
     {
