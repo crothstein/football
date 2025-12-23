@@ -36,10 +36,12 @@ export class AuthManager {
                 }
             }
         });
-        if (error) throw error;
-        // Check if email confirmation is required? usually yes by default in Supabase.
-        // But for this simple app we might want to assume auto-login if configured, 
-        // or we tell user to check email.
+        // Supabase sometimes returns an error even when the user was created
+        // (e.g., when trigger fails after user insert). Check if user exists.
+        if (error && !data?.user) {
+            throw error;
+        }
+        // If we have a user, return success even if there was an error
         return data;
     }
 
