@@ -209,13 +209,13 @@ export class PrintModule {
             // Playbook headers also need alignment
             header.style.display = 'flex';
             header.style.alignItems = 'center';
-            header.style.gap = '4px'; // Minimal space between number and title
+            header.style.gap = '2px'; // Minimal space between number and title
         }
 
         // Create number and title spans with appropriate styling
         const numberSpan = document.createElement('span');
-        numberSpan.textContent = playNumber;
-        numberSpan.style.minWidth = '20px'; // Fixed width for numbers under 100
+        numberSpan.textContent = playNumber + '.'; // Add period separator like play cards
+        numberSpan.style.minWidth = '24px'; // Slightly wider for number + period
         numberSpan.style.flexShrink = '0'; // Don't shrink the number
 
         const titleSpan = document.createElement('span');
