@@ -84,6 +84,15 @@ class App {
         // Update User Profile UI
         this.ui.updateUserProfile(user, profile);
 
+        // Set Sentry user context for error tracking
+        if (typeof Sentry !== 'undefined' && typeof Sentry.setUser === 'function' && user) {
+            Sentry.setUser({
+                id: user.id,
+                email: user.email,
+                username: profile?.full_name || user.email
+            });
+        }
+
         this.editor.init();
 
         // Check for pending template from localStorage (stored before auth)
@@ -630,6 +639,10 @@ class App {
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
                 try {
+                    // Clear Sentry user context on logout
+                    if (typeof Sentry !== 'undefined' && typeof Sentry.setUser === 'function') {
+                        Sentry.setUser(null);
+                    }
                     await this.auth.logout();
                     // Don't show message, just reload to show auth page
                     window.location.reload();

@@ -10,33 +10,91 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Sentry Error Tracking -->
+    <script
+        src="https://js.sentry-cdn.com/fe9c628142f1d55290dbff20e175b552.min.js"
+        crossorigin="anonymous"
+    ></script>
     <script>
-        // Global Error Handler for debugging
-        window.onerror = function (msg, url, line, col, error) {
-            const div = document.createElement('div');
-            div.style.position = 'fixed';
-            div.style.top = '0';
-            div.style.left = '0';
-            div.style.width = '100%';
-            div.style.height = '100%';
-            div.style.backgroundColor = 'rgba(0,0,0,0.8)';
-            div.style.color = 'red';
-            div.style.padding = '20px';
-            div.style.zIndex = '9999';
-            div.style.overflow = 'auto';
-            div.style.fontSize = '16px';
-            div.style.fontFamily = 'monospace';
-            div.innerHTML = `<h3>Application Error</h3>
-            <p><strong>Message:</strong> ${msg}</p>
-            <p><strong>File:</strong> ${url}:${line}:${col}</p>
-            <pre>${error ? error.stack : ''}</pre>`;
-            document.body.appendChild(div);
-            return false;
-        };
-        // Catch unhandled promise rejections too
-        window.onunhandledrejection = function (event) {
-            window.onerror(event.reason.message || 'Unhandled Rejection', '', 0, 0, event.reason);
-        };
+        // Configure Sentry with smart filtering to reduce noise
+        Sentry.onLoad(function() {
+            Sentry.init({
+                // Environment tagging
+                environment: window.location.hostname === 'localhost' ? 'development' : 'production',
+                
+                // Filter out noisy, non-actionable errors
+                ignoreErrors: [
+                    // Browser/rendering quirks
+                    'ResizeObserver loop limit exceeded',
+                    'ResizeObserver loop completed with undelivered notifications',
+                    // Network issues (user's internet, not our bug)
+                    'Network request failed',
+                    'Failed to fetch',
+                    'Load failed',
+                    'NetworkError',
+                    // Cross-origin scripts we can't debug
+                    'Script error.',
+                    'Script error',
+                    // Browser extensions
+                    'Non-Error exception captured',
+                    'Non-Error promise rejection captured',
+                    // Chrome extensions
+                    /extensions\//i,
+                    /^chrome:\/\//i,
+                    /^chrome-extension:\/\//i,
+                    // Safari extensions  
+                    /^safari-extension:\/\//i,
+                    // Firefox extensions
+                    /^moz-extension:\/\//i,
+                ],
+                
+                // Don't send errors from browser extension URLs
+                denyUrls: [
+                    /extensions\//i,
+                    /^chrome:\/\//i,
+                    /^chrome-extension:\/\//i,
+                    /^safari-extension:\/\//i,
+                    /^moz-extension:\/\//i,
+                ],
+                
+                // Only send errors from our domain
+                allowUrls: [
+                    /flagsketch\.com/i,
+                    /localhost/i,
+                    /127\.0\.0\.1/i,
+                ],
+                
+                // Capture 100% of errors (adjust if volume is too high)
+                sampleRate: 1.0,
+                
+                // Add context before sending
+                beforeSend(event, hint) {
+                    // Skip errors in development (optional - remove if you want dev errors too)
+                    // if (window.location.hostname === 'localhost') {
+                    //     return null;
+                    // }
+                    
+                    // Add current page context
+                    event.tags = event.tags || {};
+                    event.tags.page = window.location.pathname;
+                    
+                    // Add playbook context if available
+                    if (window.app && window.app.store) {
+                        const currentPlaybook = window.app.store.currentPlaybook;
+                        if (currentPlaybook) {
+                            event.tags.playbook_id = currentPlaybook.id;
+                        }
+                        const currentPlay = window.app.store.currentPlay;
+                        if (currentPlay) {
+                            event.tags.play_id = currentPlay.id;
+                        }
+                    }
+                    
+                    return event;
+                }
+            });
+        });
     </script>
 </head>
 
