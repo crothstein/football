@@ -10,19 +10,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
+
     <!-- Sentry Error Tracking -->
-    <script
-        src="https://js.sentry-cdn.com/fe9c628142f1d55290dbff20e175b552.min.js"
-        crossorigin="anonymous"
-    ></script>
+    <script src="https://js.sentry-cdn.com/fe9c628142f1d55290dbff20e175b552.min.js" crossorigin="anonymous"></script>
     <script>
         // Configure Sentry with smart filtering to reduce noise
-        Sentry.onLoad(function() {
+        Sentry.onLoad(function () {
             Sentry.init({
                 // Environment tagging
                 environment: window.location.hostname === 'localhost' ? 'development' : 'production',
-                
+
                 // Filter out noisy, non-actionable errors
                 ignoreErrors: [
                     // Browser/rendering quirks
@@ -48,7 +45,7 @@
                     // Firefox extensions
                     /^moz-extension:\/\//i,
                 ],
-                
+
                 // Don't send errors from browser extension URLs
                 denyUrls: [
                     /extensions\//i,
@@ -57,28 +54,28 @@
                     /^safari-extension:\/\//i,
                     /^moz-extension:\/\//i,
                 ],
-                
+
                 // Only send errors from our domain
                 allowUrls: [
                     /flagsketch\.com/i,
                     /localhost/i,
                     /127\.0\.0\.1/i,
                 ],
-                
+
                 // Capture 100% of errors (adjust if volume is too high)
                 sampleRate: 1.0,
-                
+
                 // Add context before sending
                 beforeSend(event, hint) {
                     // Skip errors in development (optional - remove if you want dev errors too)
                     // if (window.location.hostname === 'localhost') {
                     //     return null;
                     // }
-                    
+
                     // Add current page context
                     event.tags = event.tags || {};
                     event.tags.page = window.location.pathname;
-                    
+
                     // Add playbook context if available
                     if (window.app && window.app.store) {
                         const currentPlaybook = window.app.store.currentPlaybook;
@@ -90,7 +87,7 @@
                             event.tags.play_id = currentPlay.id;
                         }
                     }
-                    
+
                     return event;
                 }
             });
@@ -531,6 +528,17 @@
                 </div>
             </div>
             <div class="mobile-actions">
+                <button id="mobile-help-btn" class="mobile-icon-btn help-icon-btn"
+                    title="Need help? Please email support@flagsketch.com with any questions you have">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span class="help-tooltip">Need help? Please email support@flagsketch.com with any questions you
+                        have</span>
+                </button>
                 <button id="mobile-print-btn" class="mobile-icon-btn" title="Print" style="padding: 0;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
