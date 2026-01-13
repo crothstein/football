@@ -28,15 +28,101 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Check for test mode - allows sending to a specific email for testing
+    // Check for test mode or bulk mode
     let testEmail: string | null = null
     let testName: string = 'Coach'
+    let sendToAll: boolean = false
     try {
       const body = await req.json()
       testEmail = body.test_email || null
       testName = body.test_name || 'Coach'
+      sendToAll = body.send_to_all === true
     } catch {
       // No body or invalid JSON is fine - just run normally
+    }
+
+    // Bulk mode: send to ALL users who haven't received the email yet (one-time catch-up)
+    if (sendToAll) {
+      console.log('Bulk mode: sending to all users who have not received re-engagement email')
+
+      // Get all users who haven't received the email
+      const { data: allUsers, error: queryError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .eq('reengagement_email_sent', false)
+        .not('email', 'is', null)
+
+      if (queryError) {
+        console.error('Error fetching users:', queryError)
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch users', details: queryError }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (!allUsers || allUsers.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, message: 'No users to email', sent: 0 }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      console.log(`Found ${allUsers.length} users to send re-engagement email`)
+
+      let sentCount = 0
+      const errors: any[] = []
+
+      for (const user of allUsers) {
+        const firstName = user.full_name?.split(' ')[0] || 'Coach'
+        const emailHtml = generateEmailHtml(firstName)
+        const emailText = generateEmailText(firstName)
+
+        const resendResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`
+          },
+          body: JSON.stringify({
+            from: 'FlagSketch <notifications@flagsketch.com>',
+            to: [user.email],
+            subject: 'Ready to build your playbook? 🏈',
+            html: emailHtml,
+            text: emailText
+          })
+        })
+
+        const resendData = await resendResponse.json()
+
+        if (!resendResponse.ok) {
+          console.error(`Failed to send email to ${user.email}:`, resendData)
+          errors.push({ email: user.email, error: resendData })
+          continue
+        }
+
+        // Mark user as having received the email
+        await supabase
+          .from('profiles')
+          .update({ reengagement_email_sent: true })
+          .eq('id', user.id)
+
+        sentCount++
+        console.log(`Sent re-engagement email to ${user.email}`)
+
+        // Rate limit: Resend allows 2 requests/second, so wait 600ms between emails
+        await new Promise(resolve => setTimeout(resolve, 600))
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          bulk: true,
+          sent: sentCount,
+          total: allUsers.length,
+          errors: errors.length > 0 ? errors : undefined
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // If test_email is provided, send directly to that email
