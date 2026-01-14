@@ -123,6 +123,10 @@ def generate_head(title, description, image=None, canonical=None):
         <meta name="description" content="{description}">
         {canonical_tag}
         
+        <!-- Favicon -->
+        <link rel="icon" type="image/png" href="/favicon.png">
+        <link rel="icon" type="image/x-icon" href="/favicon.ico">
+        
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website">
         <meta property="og:title" content="{title}">
@@ -169,11 +173,11 @@ def generate_footer():
         </div>
         <div class="footer-links">
             <a href="/play-templates/">Templates</a>
-            <a href="#">Support</a>
+            <a href="mailto:support@flagsketch.com">Support</a>
             <a href="#">Privacy</a>
         </div>
         <div class="copyright">
-            © 2025 FlagSketch. All rights reserved.
+            © 2026 FlagSketch. All rights reserved.
         </div>
     </footer>
     """
