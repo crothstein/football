@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://flagsketch.com/sitemap.xml
+
+# Disallow scripts and internal directories
+Disallow: /scripts/
+Disallow: /.git/
