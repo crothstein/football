@@ -146,11 +146,12 @@ def generate_nav():
             </div>
             <nav class="nav-actions">
                 <div class="nav-dropdown">
-                    <a href="/play-templates/" class="nav-link">Flag Football Plays</a>
+                    <a href="/strategy/" class="nav-link">Resources</a>
                     <div class="dropdown-menu">
-                        <a href="/play-templates/5v5/">5v5 Flag Football Plays</a>
-                        <a href="/play-templates/6v6/">6v6 Flag Football Plays</a>
-                        <a href="/play-templates/7v7/">7v7 Flag Football Plays</a>
+                        <a href="/play-templates/">Play Templates</a>
+                        <a href="/strategy/coaching-guides/">Coaching Guides</a>
+                        <a href="/strategy/offense/">Offense Tips</a>
+                        <a href="/strategy/defense/">Defense Tips</a>
                     </div>
                 </div>
                 <a href="/app.html" class="nav-link">Log In</a>
@@ -344,6 +345,12 @@ def generate_main_hub(formats):
     <body>
         {generate_nav()}
         
+        <div class="breadcrumbs">
+            <a href="/">Home</a> &gt; 
+            <a href="/strategy/">Strategy</a> &gt; 
+            <span>Play Templates</span>
+        </div>
+        
         <section class="hero-small">
             <h1>Winning Plays for Every League.</h1>
             <p>Select your format to start browsing free templates.</p>
@@ -419,7 +426,7 @@ def generate_format_page(fmt, playbooks):
         {generate_nav()}
         
         <div class="breadcrumbs">
-            <a href="/">Home</a> &gt; <a href="/play-templates/">Flag Football Plays</a> &gt; <span>{fmt} Plays</span>
+            <a href="/">Home</a> &gt; <a href="/strategy/">Strategy</a> &gt; <a href="/play-templates/">Play Templates</a> &gt; <span>{fmt} Plays</span>
         </div>
 
         <section class="hero-small">
@@ -493,7 +500,8 @@ def generate_collection_page(fmt, playbook):
         
         <div class="breadcrumbs">
             <a href="/">Home</a> &gt; 
-            <a href="/play-templates/">Flag Football Plays</a> &gt; 
+            <a href="/strategy/">Strategy</a> &gt; 
+            <a href="/play-templates/">Play Templates</a> &gt; 
             <a href="/play-templates/{fmt}/">{fmt} Plays</a> &gt; 
             <span>{playbook['title']}</span>
         </div>
@@ -552,24 +560,30 @@ def generate_detail_page(fmt, playbook, play):
             {
                 "@type": "ListItem",
                 "position": 2,
-                "name": "Flag Football Plays",
-                "item": "https://flagsketch.com/play-templates/"
+                "name": "Strategy",
+                "item": "https://flagsketch.com/strategy/"
             },
             {
                 "@type": "ListItem",
                 "position": 3,
+                "name": "Play Templates",
+                "item": "https://flagsketch.com/play-templates/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 4,
                 "name": f"{fmt} Plays",
                 "item": f"https://flagsketch.com/play-templates/{fmt}/"
             },
             {
                 "@type": "ListItem",
-                "position": 4,
+                "position": 5,
                 "name": playbook['title'],
                 "item": f"https://flagsketch.com/play-templates/{fmt}/{pb_slug}/"
             },
             {
                 "@type": "ListItem",
-                "position": 5,
+                "position": 6,
                 "name": play['name']
             }
         ]
@@ -587,7 +601,8 @@ def generate_detail_page(fmt, playbook, play):
         
         <div class="breadcrumbs">
             <a href="/">Home</a> &gt; 
-            <a href="/play-templates/">Flag Football Plays</a> &gt; 
+            <a href="/strategy/">Strategy</a> &gt; 
+            <a href="/play-templates/">Play Templates</a> &gt; 
             <a href="/play-templates/{fmt}/">{fmt} Plays</a> &gt; 
             <a href="/play-templates/{fmt}/{pb_slug}/">{playbook['title']}</a> &gt; 
             <span>{play['name']}</span>
