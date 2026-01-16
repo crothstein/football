@@ -2362,6 +2362,8 @@ body {
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .mobile-icon-btn {
