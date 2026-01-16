@@ -498,4 +498,55 @@ export class Store {
 
         return savedPlaybook;
     }
+
+    // --- Template Browsing ---
+
+    async getPublicPlaybooks(teamSize) {
+        // Fetch all public playbooks filtered by team size
+        // Normalize team size format (e.g., "5" -> "5v5" or keep "5v5")
+        const normalizedSize = teamSize.includes('v') ? teamSize : `${teamSize}v${teamSize}`;
+
+        const { data, error } = await supabase
+            .from('playbooks')
+            .select(`
+                *,
+                plays (*)
+            `)
+            .eq('is_public', true)
+            .eq('team_size', normalizedSize)
+            .order('title', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching public playbooks:', error);
+            return [];
+        }
+
+        return data.map(pb => this._mapPlaybook(pb));
+    }
+
+    async copyPlaysFromTemplate(targetPlaybookId, plays, startingOrder = 0) {
+        // Copy one or more plays from templates into user's playbook
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const copiedPlays = [];
+
+        for (let i = 0; i < plays.length; i++) {
+            const play = plays[i];
+            const newPlay = {
+                name: play.name,
+                description: play.description || '',
+                formation: play.formation,
+                players: play.players,
+                routes: play.routes,
+                icons: play.icons || [],
+                order: startingOrder + i
+            };
+
+            const savedPlay = await this.savePlay(targetPlaybookId, newPlay);
+            copiedPlays.push(savedPlay);
+        }
+
+        return copiedPlays;
+    }
 }

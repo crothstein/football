@@ -8,7 +8,7 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PlayMaker - Flag Football Designer</title>
-    <link rel="stylesheet" href="css/style_v17.css?v=23">
+    <link rel="stylesheet" href="css/style_v17.css?v=30">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -531,6 +531,15 @@
                 </div>
             </div>
             <div class="mobile-actions">
+                <button id="mobile-templates-btn" class="mobile-icon-btn" title="View Templates">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                </button>
                 <button id="mobile-help-btn" class="mobile-icon-btn help-icon-btn"
                     title="Need help? Please email support@flagsketch.com with any questions you have">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -597,7 +606,9 @@
                             <rect x="6" y="14" width="12" height="8"></rect>
                         </svg>
                     </button>
-                    <button id="header-new-play-btn" class="btn-dark small">+ New Play</button>
+                    <button id="header-templates-btn" class="btn-outline-prof" title="Browse Templates">Browse
+                        Templates</button>
+                    <button id="header-new-play-btn" class="btn-dark small">+ Create Play</button>
                 </div>
             </div>
 
@@ -937,15 +948,78 @@
     </div>
     </div>
 
+    <!-- VIEW: Template Browser Modal -->
+    <div id="view-template-browser" class="dark-overlay hidden">
+        <div class="modal-container template-browser-modal">
+            <div class="modal-header">
+                <h2>Play Templates</h2>
+                <button id="close-template-browser" class="btn-icon-light">✕</button>
+            </div>
+            <div class="template-browser-content">
+                <!-- Sidebar: Playbook List -->
+                <div class="template-sidebar">
+                    <div class="template-sidebar-header">
+                        <span class="template-format-label" id="template-format-label">5v5</span>
+                        <span class="template-sidebar-title">Playbooks</span>
+                    </div>
+                    <div id="template-playbook-list" class="template-playbook-list">
+                        <!-- Dynamically populated -->
+                        <div class="template-loading">Loading templates...</div>
+                    </div>
+                </div>
+                <!-- Main: Plays Grid -->
+                <div class="template-main">
+                    <div class="template-main-header">
+                        <h3 id="template-playbook-title">Select a playbook</h3>
+                        <div class="template-selection-controls hidden" id="template-selection-controls">
+                            <label class="template-select-all-label">
+                                <input type="checkbox" id="template-select-all">
+                                Select All
+                            </label>
+                            <span id="template-selected-count">0 selected</span>
+                        </div>
+                    </div>
+                    <div id="template-plays-grid" class="template-plays-grid">
+                        <!-- Dynamically populated -->
+                        <div class="template-empty-state">
+                            <p>Select a playbook from the sidebar to browse plays</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline-prof" id="close-template-browser-btn">Close</button>
+                <button class="btn-primary-prof" id="copy-selected-plays-btn" disabled>Copy Selected Plays</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: Play Detail Modal (zoomed view) -->
+    <div id="template-play-detail" class="dark-overlay hidden">
+        <div class="modal-container template-detail-modal">
+            <div class="modal-header">
+                <h2 id="template-detail-title">Play Name</h2>
+                <button id="close-template-detail" class="btn-icon-light">✕</button>
+            </div>
+            <div class="template-detail-preview" id="template-detail-preview">
+                <!-- SVG preview rendered here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline-prof" id="close-template-detail-btn">Close</button>
+                <button class="btn-primary-prof" id="copy-template-detail-btn">Copy to Playbook</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden Print Container -->
     <div id="print-container"></div>
 
     <!-- Snackbar for notifications -->
     <div id="snackbar" class="snackbar hidden">Click edit to start making edits</div>
     <script type="module" src="js/formations.js?v=15"></script>
-    <script type="module" src="js/store.js?v=19"></script>
+    <script type="module" src="js/store.js?v=20"></script>
     <script type="module" src="js/editor.js?v=15"></script>
-    <script type="module" src="js/ui.js?v=28"></script>
+    <script type="module" src="js/ui.js?v=32"></script>
     <script type="module" src="js/print.js?v=7"></script> <!-- Fixed header colors with !important -->
     <script type="module" src="js/app.js?v=19"></script>
 </body>

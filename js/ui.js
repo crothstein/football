@@ -68,6 +68,7 @@ export class UI {
         this.confirmCancel = document.getElementById('confirm-cancel');
 
         this.initEventListeners();
+        this.initTemplateBrowserListeners();
     }
 
     /**
@@ -465,7 +466,7 @@ export class UI {
         this.playsGridEl.innerHTML = '';
 
         if (plays.length === 0) {
-            this.playsGridEl.innerHTML = '<div class="text-center text-muted" style="grid-column: 1/-1;">No plays yet. Click "New Play" to create one.</div>';
+            this.renderEmptyState(playbook);
         } else {
             plays.forEach((play, index) => {
                 const card = document.createElement('div');
@@ -1923,6 +1924,528 @@ export class UI {
         // Execute Print
         if (this.printModule) {
             this.printModule.generatePrintLayout(this.app.currentPlaybook, options);
+        }
+    }
+
+    // --- Empty State for New Playbooks ---
+
+    renderEmptyState(playbook) {
+        const teamSize = playbook.teamSize || '5v5';
+        const formattedSize = teamSize.includes('v') ? teamSize : `${teamSize}v${teamSize}`;
+
+        // Create simple centered empty state
+        const emptyState = document.createElement('div');
+        emptyState.className = 'playbook-empty-state';
+
+        emptyState.innerHTML = `
+            <div class="playbook-empty-state-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+            </div>
+            <h3>Start Building Your Playbook</h3>
+            <p>Create a new play from scratch or browse our ${formattedSize} template library for inspiration.</p>
+            <div class="empty-state-actions">
+                <button id="empty-state-new-play" class="btn-primary">+ Create Play</button>
+                <button id="empty-state-browse-templates" class="btn-secondary-outline">Browse Templates</button>
+            </div>
+        `;
+
+        this.playsGridEl.appendChild(emptyState);
+
+        // Wire up buttons
+        const newPlayBtn = document.getElementById('empty-state-new-play');
+        if (newPlayBtn) {
+            newPlayBtn.onclick = async () => {
+                if (await this.app.checkUnsavedChanges()) {
+                    this.app.handleNewPlay();
+                }
+            };
+        }
+
+        const browseBtn = document.getElementById('empty-state-browse-templates');
+        if (browseBtn) {
+            browseBtn.onclick = () => this.openTemplateBrowser();
+        }
+    }
+
+    async loadEmptyStateTemplates(teamSize) {
+        const gridEl = document.getElementById('empty-state-template-grid');
+        if (!gridEl) return;
+
+        try {
+            const playbooks = await this.store.getPublicPlaybooks(teamSize);
+
+            if (playbooks.length === 0) {
+                gridEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">No templates available yet.</p>';
+                return;
+            }
+
+            gridEl.innerHTML = '';
+
+            // Get first few plays from templates to show as previews (max 4)
+            let previewCount = 0;
+            for (const pb of playbooks) {
+                if (!pb.plays || pb.plays.length === 0) continue;
+
+                for (const play of pb.plays.slice(0, 2)) {
+                    if (previewCount >= 4) break;
+
+                    const card = document.createElement('div');
+                    card.className = 'template-play-card';
+                    card.dataset.playId = play.id;
+                    card.dataset.sourcePlaybook = pb.name;
+
+                    const preview = document.createElement('div');
+                    preview.className = 'template-play-preview';
+                    preview.appendChild(this.createPlayPreviewSVG(play));
+
+                    const info = document.createElement('div');
+                    info.className = 'template-play-info';
+                    info.innerHTML = `<div class="template-play-name">${play.name || 'Untitled'}</div>`;
+
+                    card.appendChild(preview);
+                    card.appendChild(info);
+
+                    card.onclick = async () => {
+                        // Quick copy this single play
+                        const confirmed = await this.showConfirmDialog(
+                            'Copy Play?',
+                            `Add "${play.name}" to your playbook?`,
+                            'Copy',
+                            'btn-primary-prof'
+                        );
+                        if (confirmed) {
+                            await this.copyPlayToCurrentPlaybook(play);
+                        }
+                    };
+
+                    gridEl.appendChild(card);
+                    previewCount++;
+                }
+
+                if (previewCount >= 4) break;
+            }
+
+            if (previewCount === 0) {
+                gridEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">No plays available in templates.</p>';
+            }
+        } catch (err) {
+            console.error('Error loading empty state templates:', err);
+            gridEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Failed to load templates.</p>';
+        }
+    }
+
+    async copyPlayToCurrentPlaybook(play) {
+        if (!this.app.currentPlaybook) return;
+
+        try {
+            const existingPlaysCount = this.app.currentPlaybook.plays?.length || 0;
+
+            const [copiedPlay] = await this.store.copyPlaysFromTemplate(
+                this.app.currentPlaybook.id,
+                [play],
+                existingPlaysCount
+            );
+
+            this.app.currentPlaybook.plays = [
+                ...(this.app.currentPlaybook.plays || []),
+                copiedPlay
+            ];
+
+            this.renderPlaybookOverview(this.app.currentPlaybook);
+            this.showSnackbar(`"${play.name}" added to your playbook`);
+        } catch (err) {
+            console.error('Error copying play:', err);
+            alert('Failed to copy play. Please try again.');
+        }
+    }
+
+    // --- Template Browser Methods ---
+
+    async openTemplateBrowser() {
+        if (!this.app.currentPlaybook) return;
+
+        const modal = document.getElementById('view-template-browser');
+        if (!modal) return;
+
+        // Reset state
+        this._selectedTemplates = new Set();
+        this._currentTemplatePlaybook = null;
+
+        // Get current playbook's team size
+        const teamSize = this.app.currentPlaybook.teamSize || '5v5';
+        const formatLabel = document.getElementById('template-format-label');
+        if (formatLabel) {
+            formatLabel.textContent = teamSize.includes('v') ? teamSize : `${teamSize}v${teamSize}`;
+        }
+
+        // Show modal
+        modal.classList.remove('hidden');
+
+        // Load template playbooks
+        await this.loadTemplatePlaybooks(teamSize);
+    }
+
+    closeTemplateBrowser() {
+        const modal = document.getElementById('view-template-browser');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        this._selectedTemplates = new Set();
+        this._currentTemplatePlaybook = null;
+    }
+
+    async loadTemplatePlaybooks(teamSize) {
+        const listEl = document.getElementById('template-playbook-list');
+        if (!listEl) return;
+
+        listEl.innerHTML = '<div class="template-loading">Loading templates...</div>';
+
+        try {
+            const playbooks = await this.store.getPublicPlaybooks(teamSize);
+
+            if (playbooks.length === 0) {
+                listEl.innerHTML = '<div class="template-loading">No templates available for this format</div>';
+                return;
+            }
+
+            listEl.innerHTML = '';
+            this._templatePlaybooks = playbooks;
+
+            playbooks.forEach((pb, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'template-playbook-item';
+                btn.innerHTML = `
+                    <span class="playbook-name">${pb.name}</span>
+                    <span class="play-count">${pb.plays?.length || 0} plays</span>
+                `;
+                btn.onclick = () => this.selectTemplatePlaybook(pb, btn);
+
+                listEl.appendChild(btn);
+
+                // Auto-select first playbook
+                if (index === 0) {
+                    this.selectTemplatePlaybook(pb, btn);
+                }
+            });
+        } catch (err) {
+            console.error('Error loading template playbooks:', err);
+            listEl.innerHTML = '<div class="template-loading">Failed to load templates</div>';
+        }
+    }
+
+    selectTemplatePlaybook(playbook, btnElement) {
+        // Update active state
+        document.querySelectorAll('.template-playbook-item').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        btnElement.classList.add('active');
+
+        this._currentTemplatePlaybook = playbook;
+        this._selectedTemplates = new Set();
+
+        // Update title
+        const titleEl = document.getElementById('template-playbook-title');
+        if (titleEl) {
+            titleEl.textContent = playbook.name;
+        }
+
+        // Show selection controls
+        const controlsEl = document.getElementById('template-selection-controls');
+        if (controlsEl) {
+            controlsEl.classList.remove('hidden');
+        }
+
+        // Reset select all checkbox
+        const selectAllCheckbox = document.getElementById('template-select-all');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+        }
+
+        // Render plays
+        this.renderTemplatePlays(playbook.plays || []);
+        this.updateSelectedCount();
+    }
+
+    renderTemplatePlays(plays) {
+        const gridEl = document.getElementById('template-plays-grid');
+        if (!gridEl) return;
+
+        if (plays.length === 0) {
+            gridEl.innerHTML = '<div class="template-empty-state"><p>This playbook has no plays</p></div>';
+            return;
+        }
+
+        gridEl.innerHTML = '';
+
+        plays.forEach(play => {
+            const card = document.createElement('div');
+            card.className = 'template-play-card';
+            card.dataset.playId = play.id;
+
+            // Header with checkbox, name, and view button (like playbook cards)
+            const header = document.createElement('div');
+            header.className = 'template-play-header';
+
+            const headerLeft = document.createElement('div');
+            headerLeft.className = 'template-play-header-left';
+
+            // Checkbox for selection
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'template-play-checkbox';
+            checkbox.checked = this._selectedTemplates.has(play.id);
+            checkbox.onclick = (e) => {
+                e.stopPropagation();
+                this.toggleTemplateSelection(play.id, checkbox.checked);
+            };
+
+            const nameEl = document.createElement('span');
+            nameEl.className = 'template-play-name';
+            nameEl.textContent = play.name || 'Untitled Play';
+            nameEl.title = play.name || 'Untitled Play';
+
+            headerLeft.appendChild(checkbox);
+            headerLeft.appendChild(nameEl);
+
+            // Actions (view button)
+            const actions = document.createElement('div');
+            actions.className = 'template-play-actions';
+
+            const viewBtn = document.createElement('button');
+            viewBtn.className = 'template-view-btn';
+            viewBtn.textContent = 'View';
+            viewBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.openPlayDetailModal(play);
+            };
+
+            actions.appendChild(viewBtn);
+
+            header.appendChild(headerLeft);
+            header.appendChild(actions);
+
+            // Preview
+            const preview = document.createElement('div');
+            preview.className = 'template-play-preview';
+            preview.appendChild(this.createPlayPreviewSVG(play));
+
+            card.appendChild(header);
+            card.appendChild(preview);
+
+            // Click anywhere on card to toggle selection
+            card.onclick = () => {
+                checkbox.checked = !checkbox.checked;
+                this.toggleTemplateSelection(play.id, checkbox.checked);
+            };
+
+            gridEl.appendChild(card);
+        });
+    }
+
+    // Open play detail modal for zoomed view
+    openPlayDetailModal(play) {
+        this._detailPlay = play;
+
+        const modal = document.getElementById('template-play-detail');
+        const titleEl = document.getElementById('template-detail-title');
+        const previewEl = document.getElementById('template-detail-preview');
+
+        if (!modal || !titleEl || !previewEl) return;
+
+        titleEl.textContent = play.name || 'Untitled Play';
+        previewEl.innerHTML = '';
+        previewEl.appendChild(this.createPlayPreviewSVG(play));
+
+        modal.classList.remove('hidden');
+    }
+
+    closePlayDetailModal() {
+        const modal = document.getElementById('template-play-detail');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        this._detailPlay = null;
+    }
+
+    async copyDetailPlayToPlaybook() {
+        if (!this._detailPlay) return;
+
+        const play = this._detailPlay;
+        this.closePlayDetailModal();
+
+        await this.copyPlayToCurrentPlaybook(play);
+        this.closeTemplateBrowser();
+    }
+
+    toggleTemplateSelection(playId, selected) {
+        if (selected) {
+            this._selectedTemplates.add(playId);
+        } else {
+            this._selectedTemplates.delete(playId);
+        }
+
+        // Update card visual
+        const card = document.querySelector(`.template-play-card[data-play-id="${playId}"]`);
+        if (card) {
+            card.classList.toggle('selected', selected);
+        }
+
+        this.updateSelectedCount();
+    }
+
+    updateSelectedCount() {
+        const countEl = document.getElementById('template-selected-count');
+        const copyBtn = document.getElementById('copy-selected-plays-btn');
+
+        const count = this._selectedTemplates.size;
+
+        if (countEl) {
+            countEl.textContent = `${count} selected`;
+        }
+
+        if (copyBtn) {
+            copyBtn.disabled = count === 0;
+            copyBtn.textContent = count === 1 ? 'Copy Selected Play' : `Copy ${count} Selected Plays`;
+        }
+
+        // Update select all checkbox state
+        const selectAllCheckbox = document.getElementById('template-select-all');
+        if (selectAllCheckbox && this._currentTemplatePlaybook) {
+            const totalPlays = this._currentTemplatePlaybook.plays?.length || 0;
+            selectAllCheckbox.checked = count === totalPlays && totalPlays > 0;
+            selectAllCheckbox.indeterminate = count > 0 && count < totalPlays;
+        }
+    }
+
+    toggleSelectAllTemplates(checked) {
+        if (!this._currentTemplatePlaybook) return;
+
+        const plays = this._currentTemplatePlaybook.plays || [];
+
+        if (checked) {
+            plays.forEach(play => this._selectedTemplates.add(play.id));
+        } else {
+            this._selectedTemplates.clear();
+        }
+
+        // Update all checkboxes
+        document.querySelectorAll('.template-play-checkbox').forEach(cb => {
+            cb.checked = checked;
+        });
+
+        // Update card visuals
+        document.querySelectorAll('.template-play-card').forEach(card => {
+            card.classList.toggle('selected', checked);
+        });
+
+        this.updateSelectedCount();
+    }
+
+    async copySelectedPlays() {
+        if (!this._selectedTemplates.size || !this.app.currentPlaybook || !this._currentTemplatePlaybook) {
+            return;
+        }
+
+        const selectedPlayIds = Array.from(this._selectedTemplates);
+        const allPlays = this._currentTemplatePlaybook.plays || [];
+        const selectedPlays = allPlays.filter(p => selectedPlayIds.includes(p.id));
+
+        if (selectedPlays.length === 0) return;
+
+        try {
+            // Get current play count to determine starting order
+            const existingPlaysCount = this.app.currentPlaybook.plays?.length || 0;
+
+            // Copy the plays
+            const copiedPlays = await this.store.copyPlaysFromTemplate(
+                this.app.currentPlaybook.id,
+                selectedPlays,
+                existingPlaysCount
+            );
+
+            // Update local playbook data
+            this.app.currentPlaybook.plays = [
+                ...(this.app.currentPlaybook.plays || []),
+                ...copiedPlays
+            ];
+
+            // Close modal and refresh view
+            this.closeTemplateBrowser();
+            this.renderPlaybookOverview(this.app.currentPlaybook);
+
+            // Show success message
+            this.showSnackbar(`Copied ${copiedPlays.length} play${copiedPlays.length === 1 ? '' : 's'} to your playbook`);
+        } catch (err) {
+            console.error('Error copying plays:', err);
+            alert('Failed to copy plays. Please try again.');
+        }
+    }
+
+    showSnackbar(message) {
+        const snackbar = document.getElementById('snackbar');
+        if (snackbar) {
+            snackbar.textContent = message;
+            snackbar.classList.remove('hidden');
+            setTimeout(() => {
+                snackbar.classList.add('hidden');
+            }, 3000);
+        }
+    }
+
+    initTemplateBrowserListeners() {
+        // Open buttons
+        const mobileTemplatesBtn = document.getElementById('mobile-templates-btn');
+        if (mobileTemplatesBtn) {
+            mobileTemplatesBtn.onclick = () => this.openTemplateBrowser();
+        }
+
+        const headerTemplatesBtn = document.getElementById('header-templates-btn');
+        if (headerTemplatesBtn) {
+            headerTemplatesBtn.onclick = () => this.openTemplateBrowser();
+        }
+
+        // Close buttons
+        const closeBtn = document.getElementById('close-template-browser');
+        if (closeBtn) {
+            closeBtn.onclick = () => this.closeTemplateBrowser();
+        }
+
+        const closeBtnFooter = document.getElementById('close-template-browser-btn');
+        if (closeBtnFooter) {
+            closeBtnFooter.onclick = () => this.closeTemplateBrowser();
+        }
+
+        // Copy button
+        const copyBtn = document.getElementById('copy-selected-plays-btn');
+        if (copyBtn) {
+            copyBtn.onclick = () => this.copySelectedPlays();
+        }
+
+        // Select all checkbox
+        const selectAllCheckbox = document.getElementById('template-select-all');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.onchange = (e) => this.toggleSelectAllTemplates(e.target.checked);
+        }
+
+        // Play detail modal listeners
+        const closeDetail = document.getElementById('close-template-detail');
+        if (closeDetail) {
+            closeDetail.onclick = () => this.closePlayDetailModal();
+        }
+
+        const closeDetailBtn = document.getElementById('close-template-detail-btn');
+        if (closeDetailBtn) {
+            closeDetailBtn.onclick = () => this.closePlayDetailModal();
+        }
+
+        const copyDetailBtn = document.getElementById('copy-template-detail-btn');
+        if (copyDetailBtn) {
+            copyDetailBtn.onclick = () => this.copyDetailPlayToPlaybook();
         }
     }
 }
