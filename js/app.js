@@ -268,21 +268,33 @@ class App {
                 }
 
                 try {
-                    await this.auth.signup(email, password, name);
-                    // Store email for resend functionality
-                    this.pendingConfirmationEmail = email;
-                    // Show confirmation pending view
-                    document.getElementById('confirm-email-display').textContent = email;
-                    this.toggleAuthForms('confirm');
-                } catch (error) {
-                    // Supabase often returns "Database error saving new user" even when
-                    // the user was created (due to trigger issues). Show confirmation
-                    // page anyway since the user usually exists.
-                    if (error.message && error.message.includes('Database error saving new user')) {
-                        console.warn('Signup returned database error, but user may have been created:', error.message);
+                    const result = await this.auth.signup(email, password, name);
+
+                    // With email verification disabled, user is immediately authenticated
+                    // Just initialize the app to log them in
+                    if (result.session) {
+                        this.initializeApp();
+                    } else {
+                        // Fallback: If no session returned, show confirmation screen
+                        // (This handles case where email verification is re-enabled later)
                         this.pendingConfirmationEmail = email;
                         document.getElementById('confirm-email-display').textContent = email;
                         this.toggleAuthForms('confirm');
+                    }
+                } catch (error) {
+                    // Supabase often returns "Database error saving new user" even when
+                    // the user was created (due to trigger issues). Try to get session anyway.
+                    if (error.message && error.message.includes('Database error saving new user')) {
+                        console.warn('Signup returned database error, but user may have been created:', error.message);
+                        // Check if there's actually a session
+                        const session = await this.auth.getSession();
+                        if (session) {
+                            this.initializeApp();
+                        } else {
+                            this.pendingConfirmationEmail = email;
+                            document.getElementById('confirm-email-display').textContent = email;
+                            this.toggleAuthForms('confirm');
+                        }
                     } else {
                         alert('Signup failed: ' + error.message);
                     }
