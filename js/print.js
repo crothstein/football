@@ -162,9 +162,9 @@ export class PrintModule {
             // Wristband cells: Fill the grid cell
             item.style.width = '100%';
             item.style.height = '100%';
-            item.style.border = '1px dashed #ccc'; // Dashed borders for cutting
+            item.style.border = '1px solid #d1d5db'; // Solid light gray for inner divisions
             item.style.boxSizing = 'border-box';
-            item.style.padding = '1px'; // Minimal padding
+            item.style.padding = '0'; // No padding to maximize play field
             item.style.fontSize = '8px'; // Smaller font for wristbands
         } else {
             // Playbook Mode: Grid based on counts
@@ -188,41 +188,72 @@ export class PrintModule {
         // Use full name - CSS will handle truncation with text-overflow: ellipsis
         const name = play.name;
 
-        // Add wristband-specific styling
+        // Header styling - split colors: dark gray for number, light gray for name
+        header.style.display = 'flex';
+        header.style.alignItems = 'stretch';
+        header.style.gap = '0';
+        header.style.overflow = 'hidden';
+        header.style.setProperty('background', '#e5e7eb', 'important'); // Light gray background for title area
+        header.style.borderBottom = '1px solid #d1d5db';
+
+        // Add wristband-specific sizing - allow 2 lines of text
         if (layoutType === 'wristband') {
             header.style.fontSize = '6px';
-            header.style.padding = '1px 2px'; // Minimal padding
-            header.style.height = '10px';
-            header.style.minHeight = '10px';
-            header.style.maxHeight = '10px';
-            header.style.lineHeight = '1';
-            header.style.overflow = 'hidden';
-            header.style.whiteSpace = 'nowrap';
-            header.style.display = 'flex';
-            header.style.alignItems = 'center';
-            header.style.justifyContent = 'flex-start';
-            header.style.gap = '2px';
-            header.style.setProperty('background', '#4b5563', 'important'); // Dark gray background
-            header.style.setProperty('color', 'white', 'important'); // White text
-            header.style.borderBottom = '1px solid #374151';
+            header.style.height = '20px'; // Taller to fit 2 lines
+            header.style.minHeight = '20px';
+            header.style.maxHeight = '20px';
+            header.style.lineHeight = '1.3';
         } else {
-            // Playbook headers also need alignment
-            header.style.display = 'flex';
-            header.style.alignItems = 'center';
-            header.style.gap = '2px'; // Minimal space between number and title
+            // Playbook mode - slightly larger
+            header.style.fontSize = '10pt';
+            header.style.height = 'auto';
+            header.style.padding = '2px 0';
         }
 
-        // Create number and title spans with appropriate styling
+        // Create number span with dark gray background box
         const numberSpan = document.createElement('span');
-        numberSpan.textContent = playNumber + '.'; // Add period separator like play cards
-        numberSpan.style.flexShrink = '0'; // Don't shrink the number
+        numberSpan.textContent = playNumber; // No period after number
+        numberSpan.style.flexShrink = '0';
+        numberSpan.style.display = 'flex';
+        numberSpan.style.alignItems = 'center';
+        numberSpan.style.justifyContent = 'center';
+        numberSpan.style.setProperty('background', '#4b5563', 'important'); // Dark gray box
+        numberSpan.style.setProperty('color', 'white', 'important');
+        numberSpan.style.fontWeight = 'bold';
+        numberSpan.style.setProperty('-webkit-print-color-adjust', 'exact', 'important');
+        numberSpan.style.setProperty('print-color-adjust', 'exact', 'important');
 
+        if (layoutType === 'wristband') {
+            numberSpan.style.padding = '0 4px';
+            numberSpan.style.minWidth = '14px';
+        } else {
+            numberSpan.style.padding = '2px 8px';
+            numberSpan.style.minWidth = '24px';
+        }
+
+        // Create title span with light gray background (inherited from header)
         const titleSpan = document.createElement('span');
         titleSpan.textContent = name;
-        titleSpan.style.flex = '1'; // Take remaining space
+        titleSpan.style.flex = '1';
         titleSpan.style.overflow = 'hidden';
-        titleSpan.style.textOverflow = 'ellipsis';
-        titleSpan.style.whiteSpace = 'nowrap';
+        titleSpan.style.setProperty('color', '#1f2937', 'important'); // Dark text on light gray
+        titleSpan.style.fontWeight = '600';
+
+        if (layoutType === 'wristband') {
+            // Allow 2 lines of text wrapping, cut off after that
+            titleSpan.style.display = '-webkit-box';
+            titleSpan.style.webkitLineClamp = '2';
+            titleSpan.style.webkitBoxOrient = 'vertical';
+            titleSpan.style.whiteSpace = 'normal'; // Allow wrapping
+            titleSpan.style.textOverflow = 'ellipsis';
+            titleSpan.style.paddingLeft = '4px';
+            titleSpan.style.paddingRight = '2px';
+            titleSpan.style.paddingTop = '2px';
+            titleSpan.style.paddingBottom = '2px';
+        } else {
+            titleSpan.style.paddingLeft = '8px';
+            titleSpan.style.paddingRight = '4px';
+        }
 
         header.appendChild(numberSpan);
         header.appendChild(titleSpan);
@@ -235,26 +266,253 @@ export class PrintModule {
         svgContainer.style.overflow = 'hidden';
         svgContainer.style.position = 'relative';
 
-        // Clone and simplified render
-        // calls ui methods. 
-        // Need to make sure `this.ui` has `createPlayPreviewSVG` accessible maybe? 
-        // Or duplicate the logic to allow custom styling for print (e.g. B&W/Color/Thickness)
-        // I'll assume color is fine.
-
         const svg = this.ui.createPlayPreviewSVG(play);
         // Force SVG to be responsive
         svg.removeAttribute('width');
         svg.removeAttribute('height');
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', '100%');
-        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
-        // Print optimization: Ensure strokes are thick enough
-        // They are already stroke-width 3 in generic preview. Should be fine.
+        // For wristbands, use fixed viewBox so field lines are consistent across all plays
+        // Keep stroke scaling for better visibility when printed small
+        if (layoutType === 'wristband') {
+            // Use standard fixed viewBox - all plays show same field area
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+            // Scale up strokes and player icons for better visibility when printed small
+            // strokeScale=2.5 for thicker lines, shapeScale=1.5 for circle/star sizing
+            this.scaleStrokesForPrint(svg, 2.5, 1.5);
+        } else {
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        }
 
         svgContainer.appendChild(svg);
         item.appendChild(svgContainer);
 
         return item;
+    }
+
+    /**
+     * Calculate the bounding box of all content in a play
+     * @param {Object} play - The play object with players and routes
+     * @returns {Object} - {minX, minY, maxX, maxY}
+     */
+    calculatePlayBounds(play) {
+        let minX = 100, minY = 70, maxX = 0, maxY = 0;
+
+        const players = play.players || [];
+
+        players.forEach(p => {
+            // Player position
+            minX = Math.min(minX, p.x);
+            maxX = Math.max(maxX, p.x);
+            minY = Math.min(minY, p.y);
+            maxY = Math.max(maxY, p.y);
+
+            // Route points
+            if (p.route && p.route.length > 0) {
+                p.route.forEach(pt => {
+                    minX = Math.min(minX, pt.x);
+                    maxX = Math.max(maxX, pt.x);
+                    minY = Math.min(minY, pt.y);
+                    maxY = Math.max(maxY, pt.y);
+                });
+            }
+        });
+
+        // Include icons if any
+        if (play.icons) {
+            play.icons.forEach(icon => {
+                minX = Math.min(minX, icon.x);
+                maxX = Math.max(maxX, icon.x);
+                minY = Math.min(minY, icon.y);
+                maxY = Math.max(maxY, icon.y);
+            });
+        }
+
+        // Ensure minimum size and reasonable bounds
+        // Add some buffer for player circles/markers (about 2-3 units)
+        const markerBuffer = 3;
+        minX = Math.max(0, minX - markerBuffer);
+        minY = Math.max(0, minY - markerBuffer);
+        maxX = Math.min(100, maxX + markerBuffer);
+        maxY = Math.min(70, maxY + markerBuffer);
+
+        // Ensure minimum dimensions
+        if (maxX - minX < 20) {
+            const centerX = (minX + maxX) / 2;
+            minX = centerX - 10;
+            maxX = centerX + 10;
+        }
+        if (maxY - minY < 15) {
+            const centerY = (minY + maxY) / 2;
+            minY = centerY - 7.5;
+            maxY = centerY + 7.5;
+        }
+
+        return { minX, minY, maxX, maxY };
+    }
+
+    /**
+     * Scale up stroke widths and circle sizes for better print visibility
+     * @param {SVGElement} svg - The SVG element to modify
+     * @param {number} strokeScale - Scale factor for stroke widths (lines)
+     * @param {number} shapeScale - Scale factor for shapes (circles, stars)
+     */
+    scaleStrokesForPrint(svg, strokeScale = 2.0, shapeScale = 1.3) {
+        // Scale stroke-width on all elements with strokes (thicker lines)
+        const elementsWithStroke = svg.querySelectorAll('line, path, polyline');
+        elementsWithStroke.forEach(el => {
+            const currentStroke = el.getAttribute('stroke-width');
+            if (currentStroke) {
+                const newStroke = parseFloat(currentStroke) * strokeScale;
+                el.setAttribute('stroke-width', newStroke.toString());
+            }
+
+            // Scale stroke-dasharray to maintain proper dash proportions
+            const dashArray = el.getAttribute('stroke-dasharray');
+            if (dashArray) {
+                const scaledDashArray = dashArray
+                    .split(/[\s,]+/)
+                    .map(val => (parseFloat(val) * strokeScale).toString())
+                    .join(' ');
+                el.setAttribute('stroke-dasharray', scaledDashArray);
+            }
+
+            // Force linecap to 'butt' to prevent rounded ends showing past arrowheads
+            el.setAttribute('stroke-linecap', 'butt');
+        });
+
+        // Scale circle radii (player icons) - more modest scaling
+        const circles = svg.querySelectorAll('circle');
+        circles.forEach(circle => {
+            const currentR = circle.getAttribute('r');
+            if (currentR) {
+                const newR = parseFloat(currentR) * shapeScale;
+                circle.setAttribute('r', newR.toString());
+            }
+            // Also scale circle stroke-width
+            const currentStroke = circle.getAttribute('stroke-width');
+            if (currentStroke) {
+                circle.setAttribute('stroke-width', (parseFloat(currentStroke) * strokeScale).toString());
+            }
+        });
+
+        // Scale ellipses (if used for player icons)
+        const ellipses = svg.querySelectorAll('ellipse');
+        ellipses.forEach(ellipse => {
+            const rx = ellipse.getAttribute('rx');
+            const ry = ellipse.getAttribute('ry');
+            if (rx) {
+                ellipse.setAttribute('rx', (parseFloat(rx) * shapeScale).toString());
+            }
+            if (ry) {
+                ellipse.setAttribute('ry', (parseFloat(ry) * shapeScale).toString());
+            }
+        });
+
+        // Scale markers (arrowheads) modestly - 1.5x to match thicker strokes
+        const markers = svg.querySelectorAll('marker');
+        markers.forEach(marker => {
+            const markerWidth = marker.getAttribute('markerWidth');
+            const markerHeight = marker.getAttribute('markerHeight');
+            const refX = marker.getAttribute('refX');
+            const viewBox = marker.getAttribute('viewBox');
+
+            // Set overflow to visible to prevent clipping
+            marker.setAttribute('overflow', 'visible');
+
+            if (markerWidth) {
+                marker.setAttribute('markerWidth', (parseFloat(markerWidth) * 1.5).toString());
+            }
+            if (markerHeight) {
+                marker.setAttribute('markerHeight', (parseFloat(markerHeight) * 1.5).toString());
+            }
+
+            // Scale the viewBox to match the scaled marker dimensions
+            // This prevents the arrow content from being clipped
+            if (viewBox) {
+                const parts = viewBox.split(/[\s,]+/).map(parseFloat);
+                if (parts.length === 4) {
+                    // Scale the viewBox dimensions
+                    const scaledViewBox = `${parts[0]} ${parts[1]} ${parts[2] * 1.5} ${parts[3] * 1.5}`;
+                    marker.setAttribute('viewBox', scaledViewBox);
+                }
+            }
+
+            // Scale the polygon/path inside the marker to match the scaled viewBox
+            const polygon = marker.querySelector('polygon');
+            if (polygon) {
+                const points = polygon.getAttribute('points');
+                if (points) {
+                    const scaledPoints = points.split(/[\s,]+/)
+                        .map((val, i) => (parseFloat(val) * 1.5).toString())
+                        .join(' ');
+                    polygon.setAttribute('points', scaledPoints);
+                }
+            }
+
+            // Also scale refX/refY to match the scaled viewBox
+            if (refX) {
+                marker.setAttribute('refX', (parseFloat(refX) * 1.5).toString());
+            }
+            const refY = marker.getAttribute('refY');
+            if (refY) {
+                marker.setAttribute('refY', (parseFloat(refY) * 1.5).toString());
+            }
+        });
+
+        // Scale image elements (football icons) - use same scale as shapes
+        const images = svg.querySelectorAll('image');
+        images.forEach(img => {
+            const width = img.getAttribute('width');
+            const height = img.getAttribute('height');
+            const x = img.getAttribute('x');
+            const y = img.getAttribute('y');
+
+            if (width && height) {
+                const newWidth = parseFloat(width) * shapeScale;
+                const newHeight = parseFloat(height) * shapeScale;
+                img.setAttribute('width', newWidth.toString());
+                img.setAttribute('height', newHeight.toString());
+
+                // Adjust position to keep centered
+                if (x && y) {
+                    const deltaW = (newWidth - parseFloat(width)) / 2;
+                    const deltaH = (newHeight - parseFloat(height)) / 2;
+                    img.setAttribute('x', (parseFloat(x) - deltaW).toString());
+                    img.setAttribute('y', (parseFloat(y) - deltaH).toString());
+                }
+            }
+        });
+
+        // Scale polygons (primary player stars) by scaling their points around center
+        const polygons = svg.querySelectorAll('polygon');
+        polygons.forEach(polygon => {
+            const pointsAttr = polygon.getAttribute('points');
+            if (pointsAttr) {
+                // Parse points
+                const points = pointsAttr.trim().split(/[\s,]+/).map(parseFloat);
+                if (points.length >= 4 && points.length % 2 === 0) {
+                    // Calculate center
+                    let cx = 0, cy = 0;
+                    for (let i = 0; i < points.length; i += 2) {
+                        cx += points[i];
+                        cy += points[i + 1];
+                    }
+                    cx /= (points.length / 2);
+                    cy /= (points.length / 2);
+
+                    // Scale points around center using shapeScale
+                    const scaledPoints = [];
+                    for (let i = 0; i < points.length; i += 2) {
+                        const sx = cx + (points[i] - cx) * shapeScale;
+                        const sy = cy + (points[i + 1] - cy) * shapeScale;
+                        scaledPoints.push(`${sx},${sy}`);
+                    }
+                    polygon.setAttribute('points', scaledPoints.join(' '));
+                }
+            }
+        });
     }
 }

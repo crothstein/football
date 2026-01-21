@@ -2236,19 +2236,14 @@ body {
         font-size: 10pt;
         font-weight: bold;
         text-align: left;
-        background: #4b5563 !important;
-        /* Dark gray background - force override */
-        color: white !important;
-        /* White text - force override */
-        padding: 1px 0;
+        background: #e5e7eb !important;
+        /* Light gray background for title area */
+        padding: 0;
         flex-shrink: 0;
         display: flex;
         justify-content: flex-start;
-        gap: 2px;
-        padding-left: 4px;
-        padding-right: 4px;
-        border-bottom: 1px solid #374151;
-        /* Slightly darker border */
+        gap: 0;
+        border-bottom: 1px solid #d1d5db;
         -webkit-print-color-adjust: exact !important;
         /* Force background colors in print */
         print-color-adjust: exact !important;
@@ -2262,7 +2257,7 @@ body {
 
     /* Ensure wristband containers have minimal padding */
     .wristband-container .print-item {
-        padding: 1px !important;
+        padding: 0 !important;
         overflow: hidden !important;
         /* Clip content that extends beyond bounds */
     }
