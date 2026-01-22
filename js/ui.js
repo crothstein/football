@@ -1896,7 +1896,8 @@ export class UI {
 
     handlePrintConfirm() {
         // Collect Options
-        const activeTab = document.querySelector('.print-tab.active').dataset.tab;
+        const activeTabEl = document.querySelector('.print-tab.active');
+        const activeTab = activeTabEl ? activeTabEl.dataset.tab : 'playbook'; // Default to playbook if no active tab
 
         let options = {
             type: activeTab
