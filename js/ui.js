@@ -289,7 +289,15 @@ export class UI {
         // Print Tabs
         this.printTabs.forEach(tab => {
             tab.addEventListener('click', (e) => {
-                const target = e.target.dataset.tab;
+                // Use closest() to handle clicks on child elements
+                const clickedTab = e.target.closest('.print-tab');
+                if (!clickedTab) return;
+
+                const target = clickedTab.dataset.tab;
+                if (!target) return; // Guard against missing data-tab
+
+                const targetSection = document.getElementById(`print-options-${target}`);
+                if (!targetSection) return; // Guard against missing section element
 
                 // Active Tab - use dark colors for light modal background
                 this.printTabs.forEach(t => {
@@ -297,13 +305,13 @@ export class UI {
                     t.style.borderBottomColor = 'transparent';
                     t.style.color = 'var(--text-muted)'; // Gray text for inactive
                 });
-                e.target.classList.add('active');
-                e.target.style.borderBottomColor = '#3b82f6';
-                e.target.style.color = 'var(--text-main)'; // Dark text for active
+                clickedTab.classList.add('active');
+                clickedTab.style.borderBottomColor = '#3b82f6';
+                clickedTab.style.color = 'var(--text-main)'; // Dark text for active
 
                 // Show Section
                 this.printOptionsSections.forEach(sec => sec.classList.add('hidden'));
-                document.getElementById(`print-options-${target}`).classList.remove('hidden');
+                targetSection.classList.remove('hidden');
             });
         });
 
