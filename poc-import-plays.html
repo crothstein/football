@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Play Import POC - Image to Play Converter</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #f8fafc;
+            --card-bg: white;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text-muted);
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--warning);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card h2 .step {
+            background: var(--primary);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        /* API Key Input */
+        .api-key-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .api-key-section label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .api-key-section input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .api-key-section small {
+            display: block;
+            margin-top: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafbfc;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: #f0f0ff;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: #ede9fe;
+        }
+
+        .upload-area svg {
+            width: 48px;
+            height: 48px;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .upload-area p {
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-area .browse-link {
+            color: var(--primary);
+            font-weight: 500;
+            text-decoration: underline;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* Preview */
+        .image-preview {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .image-preview .image-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .image-preview button {
+            background: none;
+            border: none;
+            color: var(--error);
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        /* Process Button */
+        .process-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        .process-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .process-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Results */
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .results-header h3 {
+            font-size: 1rem;
+        }
+
+        .results-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .results-stats .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .results-stats .stat.success {
+            color: var(--success);
+        }
+
+        .results-stats .stat.warning {
+            color: var(--warning);
+        }
+
+        .plays-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .play-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .play-card-header {
+            background: #f8fafc;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .play-card-header input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        .play-card-header .play-name {
+            font-weight: 500;
+            font-size: 0.85rem;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .play-card-header .play-number {
+            background: var(--primary);
+            color: white;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .play-card-preview {
+            aspect-ratio: 100/70;
+            background: linear-gradient(to bottom, #dcfce7 0%, #f0fdf4 100%);
+            position: relative;
+            padding: 0.25rem;
+            border-radius: 4px;
+        }
+
+        .play-card-preview svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .player-circle {
+            fill: white;
+            stroke-width: 1.5;
+        }
+
+        .route-line {
+            fill: none;
+            stroke-width: 1.5;
+        }
+
+        .field-line {
+            stroke: #86efac;
+            stroke-width: 0.5;
+        }
+
+        .play-card-info {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+        }
+
+        /* JSON Output */
+        .json-output {
+            margin-top: 1.5rem;
+        }
+
+        .json-output h3 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .json-output pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+
+        .status-message.error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+        }
+
+        .status-message.success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #15803d;
+        }
+
+        .status-message.warning {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #b45309;
+        }
+
+        /* Field SVG */
+        .field-line {
+            stroke: #e5e7eb;
+            stroke-width: 1;
+        }
+
+        .player-circle {
+            stroke-width: 2;
+            fill: white;
+        }
+
+        .route-line {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .route-arrow {
+            fill: currentColor;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">⚠️ PROOF OF CONCEPT - NOT PRODUCTION</span>
+            <h1>🏈 Play Import from Image</h1>
+            <p>Upload a playbook image and we'll extract the plays automatically</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Column - Upload -->
+            <div class="card">
+                <h2><span class="step">1</span> Upload Playbook Image</h2>
+
+                <div class="api-key-section">
+                    <label for="api-key">Google Gemini API Key</label>
+                    <input type="password" id="api-key" placeholder="AIza..." style="margin-bottom: 0.5rem;" />
+
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <button id="check-models-btn"
+                            style="padding: 0.5rem; background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                            🔄 Check Models
+                        </button>
+                        <select id="model-select"
+                            style="flex: 1; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; background: white;">
+                            <option value="gemini-2.0-flash" selected>gemini-2.0-flash (Fast)</option>
+                            <option value="gemini-2.0-flash-thinking-exp">gemini-2.0-flash-thinking (Best Quality)
+                            </option>
+                            <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b</option>
+                        </select>
+                    </div>
+
+                    <small>Your key is only used client-side. Get a FREE key at <a
+                            href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> (60
+                        req/min free)</small>
+                </div>
+
+                <div class="upload-area" id="upload-area">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p>Drag & drop your playbook image here</p>
+                    <p>or <span class="browse-link">browse files</span></p>
+                    <input type="file" id="file-input" accept="image/*" />
+                </div>
+
+                <div class="image-preview" id="image-preview">
+                    <img id="preview-img" src="" alt="Preview" />
+                    <div class="image-info">
+                        <span id="file-name">filename.png</span>
+                        <button id="remove-image">✕ Remove</button>
+                    </div>
+                </div>
+
+                <!-- Grid Layout Selection -->
+                <div
+                    style="margin-bottom: 1rem; padding: 0.75rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">📐
+                        Playbook Grid Layout</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select id="grid-cols" style="padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <option value="3" selected>3 columns</option>
+                            <option value="4">4 columns</option>
+                            <option value="2">2 columns</option>
+                            <option value="1">1 column</option>
+                        </select>
+                        <span>×</span>
+                        <select id="grid-rows" style="padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <option value="4" selected>4 rows</option>
+                            <option value="3">3 rows</option>
+                            <option value="5">5 rows</option>
+                            <option value="2">2 rows</option>
+                            <option value="1">1 row</option>
+                        </select>
+                        <span style="color: #64748b; font-size: 0.85rem;">=</span>
+                        <span id="total-plays" style="font-weight: 600; color: #6366f1;">12 plays</span>
+                    </div>
+                    <small style="color: #64748b; display: block; margin-top: 0.5rem;">Specify how plays are arranged in
+                        your image. Each play will be processed separately for better accuracy.</small>
+                </div>
+
+                <button class="process-btn" id="process-btn" disabled>
+                    🔍 Analyze & Extract Plays (One by One)
+                </button>
+
+                <div id="progress-container" style="display: none; margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span id="progress-text">Processing play 0 of 0...</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                    <div style="background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden;">
+                        <div id="progress-bar"
+                            style="background: linear-gradient(135deg, #6366f1, #8b5cf6); height: 100%; width: 0%; transition: width 0.3s;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-message" id="status-message"></div>
+            </div>
+
+            <!-- Right Column - Results -->
+            <div class="card">
+                <h2><span class="step">2</span> Extracted Plays</h2>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing image with Gemini Flash...</p>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">This usually takes 5-15 seconds</p>
+                </div>
+
+                <div class="results-section" id="results-section">
+                    <div class="results-header">
+                        <h3 id="results-title">Found 0 plays</h3>
+                        <div class="results-stats">
+                            <span class="stat success" id="player-count">👥 5v5</span>
+                        </div>
+                    </div>
+
+                    <div class="plays-grid" id="plays-grid">
+                        <!-- Play cards will be inserted here -->
+                    </div>
+
+                    <div class="json-output">
+                        <h3>📋 Raw JSON Output</h3>
+                        <pre id="json-output">{}</pre>
+                    </div>
+                </div>
+
+                <div id="empty-state" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <p>Upload an image to see extracted plays</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Map for Google Generative AI SDK -->
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/generative-ai": "https://esm.run/@google/generative-ai"
+        }
+      }
+    </script>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "@google/generative-ai";
+
+        // DOM Elements
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const imagePreview = document.getElementById('image-preview');
+        const previewImg = document.getElementById('preview-img');
+        const fileName = document.getElementById('file-name');
+        const removeImageBtn = document.getElementById('remove-image');
+        const processBtn = document.getElementById('process-btn');
+        const apiKeyInput = document.getElementById('api-key');
+        const statusMessage = document.getElementById('status-message');
+        const loading = document.getElementById('loading');
+        const resultsSection = document.getElementById('results-section');
+        const emptyState = document.getElementById('empty-state');
+        const playsGrid = document.getElementById('plays-grid');
+        const jsonOutput = document.getElementById('json-output');
+        const resultsTitle = document.getElementById('results-title');
+        const playerCount = document.getElementById('player-count');
+        const checkModelsBtn = document.getElementById('check-models-btn');
+        const modelSelect = document.getElementById('model-select');
+        const gridCols = document.getElementById('grid-cols');
+        const gridRows = document.getElementById('grid-rows');
+        const totalPlaysSpan = document.getElementById('total-plays');
+        const progressContainer = document.getElementById('progress-container');
+        const progressText = document.getElementById('progress-text');
+        const progressPercent = document.getElementById('progress-percent');
+        const progressBar = document.getElementById('progress-bar');
+
+        let currentImage = null;
+
+        // Update total plays display when grid changes
+        function updateTotalPlays() {
+            const total = parseInt(gridCols.value) * parseInt(gridRows.value);
+            totalPlaysSpan.textContent = `${total} plays`;
+        }
+        gridCols.addEventListener('change', updateTotalPlays);
+        gridRows.addEventListener('change', updateTotalPlays);
+
+        // Load saved API key
+        const savedKey = localStorage.getItem('gemini_api_key');
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+        }
+
+        // Save API key when changed
+        apiKeyInput.addEventListener('change', () => {
+            localStorage.setItem('gemini_api_key', apiKeyInput.value);
+            updateProcessButton();
+        });
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        removeImageBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearImage();
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showStatus('Please upload an image file', 'error');
+                return;
+            }
+
+            currentImage = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                fileName.textContent = file.name;
+                imagePreview.style.display = 'block';
+                uploadArea.style.display = 'none';
+                updateProcessButton();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearImage() {
+            currentImage = null;
+            previewImg.src = '';
+            imagePreview.style.display = 'none';
+            uploadArea.style.display = 'block';
+            fileInput.value = '';
+            updateProcessButton();
+        }
+
+        function updateProcessButton() {
+            processBtn.disabled = !currentImage || !apiKeyInput.value.trim();
+        }
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message active ${type}`;
+            if (type === 'success' || type === 'warning') {
+                setTimeout(() => {
+                    statusMessage.classList.remove('active');
+                }, 5000);
+            }
+        }
+
+        // Check Models Button
+        checkModelsBtn.addEventListener('click', async () => {
+            const key = apiKeyInput.value.trim();
+            if (!key) {
+                showStatus('Please enter an API key first', 'warning');
+                return;
+            }
+
+            checkModelsBtn.textContent = 'Checking...';
+            checkModelsBtn.disabled = true;
+            modelSelect.innerHTML = '<option>Testing models...</option>';
+
+            const candidates = [
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-001',
+                'gemini-1.5-flash-002',
+                'gemini-1.5-flash-8b',
+                'gemini-1.5-pro',
+                'gemini-1.5-pro-001',
+                'gemini-1.5-pro-002'
+            ];
+
+            const workingModels = [];
+
+            // 1. Try to list models via REST API (doesn't burn quota)
+            modelSelect.innerHTML = '<option>Fetching model list...</option>';
+            try {
+                const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                if (listResp.ok) {
+                    const listData = await listResp.json();
+                    if (listData.models) {
+                        const available = listData.models
+                            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+                            .filter(m => m.name.includes('gemini')); // Only gemini models
+
+                        if (available.length > 0) {
+                            modelSelect.innerHTML = '';
+                            // Sort to put flash models first
+                            available.sort((a, b) => {
+                                if (a.name.includes('flash') && !b.name.includes('flash')) return -1;
+                                if (!a.name.includes('flash') && b.name.includes('flash')) return 1;
+                                return a.name.localeCompare(b.name);
+                            });
+                            available.forEach(m => {
+                                const shortName = m.name.replace('models/', '');
+                                const opt = document.createElement('option');
+                                opt.value = shortName;
+                                opt.textContent = shortName;
+                                if (shortName === 'gemini-1.5-flash') opt.selected = true;
+                                modelSelect.appendChild(opt);
+                            });
+                            showStatus(`Found ${available.length} models! Ready to analyze.`, 'success');
+                            checkModelsBtn.textContent = '🔄 Check Models';
+                            checkModelsBtn.disabled = false;
+                            return; // Done!
+                        }
+                    }
+                } else {
+                    const errData = await listResp.json();
+                    throw new Error(errData.error?.message || 'API returned error');
+                }
+            } catch (e) {
+                console.error('List models failed:', e);
+                showStatus(`Could not verify models: ${e.message}. Using defaults.`, 'warning');
+                // Restore defaults
+                modelSelect.innerHTML = `
+                    <option value="gemini-1.5-flash" selected>gemini-1.5-flash (Recommended)</option>
+                    <option value="gemini-2.0-flash">gemini-2.0-flash (New)</option>
+                    <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                `;
+            } finally {
+                checkModelsBtn.textContent = '🔄 Check Models';
+                checkModelsBtn.disabled = false;
+            }
+        });
+
+        // Process button click - Sequential play-by-play processing
+        processBtn.addEventListener('click', async () => {
+            if (!currentImage || !apiKeyInput.value.trim()) return;
+
+            const cols = parseInt(gridCols.value);
+            const rows = parseInt(gridRows.value);
+            const totalPlays = cols * rows;
+
+            loading.classList.add('active');
+            emptyState.style.display = 'none';
+            resultsSection.classList.remove('active');
+            processBtn.disabled = true;
+            progressContainer.style.display = 'block';
+
+            const allPlays = [];
+            let successCount = 0;
+            let errorCount = 0;
+
+            try {
+                // Load image to get dimensions
+                const img = await loadImage(currentImage);
+                const playWidth = Math.floor(img.width / cols);
+                const playHeight = Math.floor(img.height / rows);
+
+                console.log(`Image: ${img.width}x${img.height}, Grid: ${cols}x${rows}, Play size: ${playWidth}x${playHeight}`);
+
+                // Process each play sequentially
+                for (let row = 0; row < rows; row++) {
+                    for (let col = 0; col < cols; col++) {
+                        const playIndex = row * cols + col + 1;
+
+                        // Update progress
+                        progressText.textContent = `Processing play ${playIndex} of ${totalPlays}...`;
+                        const percent = Math.round((playIndex - 1) / totalPlays * 100);
+                        progressPercent.textContent = `${percent}%`;
+                        progressBar.style.width = `${percent}%`;
+
+                        try {
+                            // Crop this play from the image
+                            const croppedBase64 = await cropImage(img, col * playWidth, row * playHeight, playWidth, playHeight);
+
+                            // Analyze just this single play
+                            const playData = await analyzeSinglePlay(croppedBase64, 'image/png', apiKeyInput.value.trim(), playIndex);
+
+                            if (playData) {
+                                allPlays.push({
+                                    ...playData,
+                                    play_number: playIndex
+                                });
+                                successCount++;
+                            }
+                        } catch (playError) {
+                            console.error(`Error processing play ${playIndex}:`, playError);
+                            errorCount++;
+
+                            // If rate limited, wait and retry once
+                            if (playError.message.includes('429')) {
+                                showStatus(`Rate limited. Waiting 30s before continuing...`, 'warning');
+                                await new Promise(r => setTimeout(r, 30000));
+
+                                try {
+                                    const croppedBase64 = await cropImage(img, col * playWidth, row * playHeight, playWidth, playHeight);
+                                    const playData = await analyzeSinglePlay(croppedBase64, 'image/png', apiKeyInput.value.trim(), playIndex);
+                                    if (playData) {
+                                        allPlays.push({ ...playData, play_number: playIndex });
+                                        successCount++;
+                                        errorCount--;
+                                    }
+                                } catch (retryError) {
+                                    console.error(`Retry failed for play ${playIndex}`);
+                                }
+                            }
+                        }
+
+                        // Small delay between plays to avoid rate limits
+                        if (playIndex < totalPlays) {
+                            await new Promise(r => setTimeout(r, 500));
+                        }
+                    }
+                }
+
+                // Update progress to complete
+                progressText.textContent = `Completed! ${successCount} plays extracted`;
+                progressPercent.textContent = '100%';
+                progressBar.style.width = '100%';
+
+                // Display results
+                const result = {
+                    playbook_name: 'Imported Playbook',
+                    team_size: allPlays[0]?.players?.length || 6,
+                    plays: allPlays
+                };
+
+                displayResults(result);
+
+                if (errorCount > 0) {
+                    showStatus(`Extracted ${successCount} plays (${errorCount} failed)`, 'warning');
+                } else {
+                    showStatus(`Successfully extracted ${successCount} plays!`, 'success');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+                emptyState.style.display = 'block';
+            } finally {
+                loading.classList.remove('active');
+                processBtn.disabled = false;
+                progressContainer.style.display = 'none';
+            }
+        });
+
+        // Load image as HTMLImageElement
+        function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // Crop a section of the image and return as base64
+        function cropImage(img, x, y, width, height) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/png').split(',')[1]);
+            });
+        }
+
+        function getBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        // Analyze a single cropped play image - uses FlagSketch exact format
+        async function analyzeSinglePlay(base64Data, mimeType, apiKey, playNumber) {
+            const prompt = `Analyze this football play diagram and extract player positions and routes.
+
+COORDINATE SYSTEM (CRITICAL - must match exactly):
+- Canvas is 100 units wide × 70 units tall
+- X: 0 = left sideline, 50 = center, 100 = right sideline
+- Y: 0 = top (endzone), 35 = center line (LOS), 70 = bottom
+- Players at line of scrimmage are typically around y = 32-38
+- Routes go UPWARD (toward y = 0)
+
+PLAYER COLORS - Use exact hex codes:
+- Red/Maroon player: "#ef4444" 
+- Orange player: "#f97316"
+- Yellow player: "#eab308"
+- Green player: "#22c55e"
+- Blue player: "#3b82f6"
+- Purple player: "#8b5cf6"
+- Black/Dark player: "#1f2937"
+- White/unfilled: "#1f2937" (treat as dark)
+
+MEASURE PLAYER POSITIONS PRECISELY:
+Look at where each colored circle is positioned:
+- Far LEFT (near left sideline): x = 5-20
+- LEFT side: x = 20-35
+- CENTER-LEFT: x = 35-45
+- CENTER: x = 45-55  
+- CENTER-RIGHT: x = 55-65
+- RIGHT side: x = 65-80
+- Far RIGHT (near right sideline): x = 80-95
+
+ROUTE EXTRACTION - Include waypoint at EVERY turn:
+For each route segment (where line changes direction), add a waypoint.
+- GO route (straight up): [{start}, {end}] = 2 points
+- OUT route (up then sideways): [{start}, {turn}, {end}] = 3 points
+- IN/SLANT route: [{start}, {end at angle}] = 2 points
+- CORNER route (up then diagonal out): [{start}, {break}, {end}] = 3 points  
+- POST route (up then diagonal in): [{start}, {break}, {end}] = 3 points
+- CURL route: [{start}, {deepest}, {curl_back}] = 3 points
+- Complex curved routes: 4-5 waypoints
+
+MOTION (dotted pre-snap line): is_motion = true, routeStyle = "dashed" for that segment
+
+Return this EXACT JSON format (no extra text):
+{
+  "play_name": "exact name from header",
+  "play_type": "run" or "pass", 
+  "players": [
+    {
+      "id": "p_1",
+      "x": 15,
+      "y": 35,
+      "color": "#f97316",
+      "label": "",
+      "route": [{"x": 15, "y": 35}, {"x": 15, "y": 10}],
+      "routeStyles": ["solid"],
+      "routeEndType": "arrow",
+      "isPrimary": false
+    }
+  ]
+}
+
+Key points:
+- Count 5-6 players per play (colored circles only, not arrows)
+- Generate unique IDs like "p_1", "p_2", etc.
+- routeStyles array has one entry per route segment (solid/dashed/squiggly)
+- routeEndType is "arrow" for most, "circle" for blocking routes
+- isPrimary = true for the QB/star player (red star marker)
+
+Analyze the image and return JSON:`;
+
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const selectedModelName = document.getElementById('model-select').value;
+            const model = genAI.getGenerativeModel({
+                model: selectedModelName,
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    maxOutputTokens: 4096
+                }
+            });
+
+            const imagePart = {
+                inlineData: {
+                    data: base64Data,
+                    mimeType: mimeType
+                }
+            };
+
+            const result = await model.generateContent([prompt, imagePart]);
+            const response = await result.response;
+            let text = response.text();
+
+            // Clean up response
+            text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                // Try to fix common issues
+                text = text.replace(/,(\s*[}\]])/g, '$1');
+                try {
+                    return JSON.parse(text);
+                } catch (e2) {
+                    console.error('Parse error for play', playNumber, text.substring(0, 500));
+                    return null;
+                }
+            }
+        }
+        async function analyzeImage(base64Data, mimeType, apiKey) {
+            const prompt = `You are analyzing a flag football playbook image. Extract the plays with PRECISE coordinates.
+
+COORDINATE SYSTEM (VERY IMPORTANT):
+- The play diagrams show a football field section
+- X-axis: 0 = left edge of diagram, 100 = right edge of diagram
+- Y-axis: 0 = TOP of diagram (toward endzone), 60 = BOTTOM of diagram (line of scrimmage)
+- MEASURE player positions carefully by looking at where they are horizontally and vertically in each play box
+
+PLAYER IDENTIFICATION:
+- Each play has EXACTLY 5 or 6 players (count the colored circles carefully)
+- Players are colored circles: red, orange, yellow, green, blue, purple
+- There may be a white circle with black outline (this is also a player - the center)
+- The red player with a star is typically the QB
+- Do NOT count arrows or route lines as players - only count the starting circles
+
+ROUTE EXTRACTION:
+- Each player has a route shown as a line from their starting position
+- For CURVED routes (like outs, corners, posts): include 3-5 waypoints to capture the curve
+- For STRAIGHT routes (go routes): just 2 points (start and end)
+- Routes go UPWARD in the diagram (toward lower Y values)
+- A dotted line before the solid route indicates PRE-SNAP MOTION
+
+For each play, extract:
+{
+  "play_number": 1,
+  "play_name": "exact name from header",
+  "play_type": "run" or "pass",
+  "players": [
+    {
+      "id": 1,
+      "x": [MEASURE: where is this player left-to-right? 0=far left, 50=center, 100=far right],
+      "y": [MEASURE: where is this player top-to-bottom? Players near LOS are around y=55-60],
+      "color": "orange",
+      "route": [
+        {"x": start_x, "y": start_y},
+        {"x": turn_x, "y": turn_y},  // if route turns
+        {"x": end_x, "y": end_y}
+      ],
+      "route_type": "go|out|in|slant|curl|post|corner|flat|swing|block",
+      "is_motion": false
+    }
+  ]
+}
+
+EXAMPLE - A player on the far LEFT with a GO route straight up:
+{"id": 1, "x": 10, "y": 58, "color": "orange", "route": [{"x": 10, "y": 58}, {"x": 10, "y": 10}], "route_type": "go", "is_motion": false}
+
+EXAMPLE - A player in CENTER with an OUT route (goes up then breaks right):
+{"id": 2, "x": 50, "y": 58, "color": "yellow", "route": [{"x": 50, "y": 58}, {"x": 50, "y": 35}, {"x": 75, "y": 35}], "route_type": "out", "is_motion": false}
+
+EXAMPLE - A player with MOTION (dotted line moving sideways before route):
+{"id": 3, "x": 45, "y": 58, "color": "blue", "route": [{"x": 45, "y": 58}, {"x": 60, "y": 58}, {"x": 60, "y": 30}], "route_type": "go", "is_motion": true}
+
+Return a JSON object:
+{
+  "playbook_name": "name from header",
+  "team_size": 5 or 6,
+  "plays": [ array of plays as described above ]
+}
+
+CRITICAL REMINDERS:
+1. Count players CAREFULLY - only count starting position circles, not route endpoints
+2. SPREAD players across the full width (x from 5 to 95) - don't bunch them in the center
+3. Measure Y positions - receivers at LOS are around y=55-60, deeper players have lower y
+4. Capture route CURVES with multiple waypoints
+5. Return ONLY valid JSON, no explanations`;
+
+            // Initialize SDK
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const selectedModelName = document.getElementById('model-select').value;
+            const model = genAI.getGenerativeModel({
+                model: selectedModelName,
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    maxOutputTokens: 32000  // Ensure we get full response
+                }
+            });
+
+            const imagePart = {
+                inlineData: {
+                    data: base64Data,
+                    mimeType: mimeType
+                }
+            };
+
+            const result = await model.generateContent([prompt, imagePart]);
+            const response = await result.response;
+            let text = response.text();
+
+            console.log('Raw API response length:', text.length);
+
+            // Clean up the response
+            text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+            text = text.trim();
+
+            // Try to parse, with repair attempts
+            try {
+                return JSON.parse(text);
+            } catch (parseError) {
+                console.warn('Initial parse failed, attempting repairs...', parseError.message);
+
+                // More aggressive JSON fixes
+                let fixed = text;
+
+                // Remove any text before the first {
+                const firstBrace = fixed.indexOf('{');
+                if (firstBrace > 0) fixed = fixed.substring(firstBrace);
+
+                // Remove any text after reasonable JSON ending
+                // Find the last complete play object and truncate there
+                const lastValidEnd = Math.max(
+                    fixed.lastIndexOf('}]}'),  // End of plays array + root object
+                    fixed.lastIndexOf('"is_motion": false}'),  // End of player
+                    fixed.lastIndexOf('"is_motion": true}')
+                );
+                if (lastValidEnd > 0) {
+                    // Keep a bit after to catch closing brackets
+                    const searchEnd = Math.min(fixed.length, lastValidEnd + 20);
+                    const endPart = fixed.substring(lastValidEnd, searchEnd);
+                    // Count and balance brackets from this point
+                    fixed = fixed.substring(0, lastValidEnd + endPart.indexOf('}') + 1);
+                }
+
+                // Remove trailing commas before } or ]
+                fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
+
+                // Fix common issues: trailing data after JSON
+                fixed = fixed.replace(/\}[^}\]]*$/, '}');
+
+                // Balance brackets
+                const openBraces = (fixed.match(/{/g) || []).length;
+                const closeBraces = (fixed.match(/}/g) || []).length;
+                const openBrackets = (fixed.match(/\[/g) || []).length;
+                const closeBrackets = (fixed.match(/\]/g) || []).length;
+
+                for (let i = 0; i < openBrackets - closeBrackets; i++) fixed += ']';
+                for (let i = 0; i < openBraces - closeBraces; i++) fixed += '}';
+
+                try {
+                    const result = JSON.parse(fixed);
+                    console.log('Repair succeeded!');
+                    return result;
+                } catch (e) {
+                    console.error('Repair attempt 1 failed:', e.message);
+                }
+
+                // Try extracting individual plays via regex
+                console.log('Attempting to extract individual plays...');
+                const playMatches = text.matchAll(/"play_number"\s*:\s*(\d+)[^}]*"play_name"\s*:\s*"([^"]+)"[^}]*"players"\s*:\s*\[([\s\S]*?)\]\s*}/g);
+                const extractedPlays = [];
+
+                for (const match of playMatches) {
+                    try {
+                        // Try to parse the players array
+                        const playersText = '[' + match[3] + ']';
+                        const playersParsed = JSON.parse(playersText.replace(/,\s*\]/g, ']'));
+                        extractedPlays.push({
+                            play_number: parseInt(match[1]),
+                            play_name: match[2],
+                            play_type: 'pass',
+                            players: playersParsed
+                        });
+                    } catch (e) {
+                        console.warn('Failed to parse play', match[1], e.message);
+                    }
+                }
+
+                if (extractedPlays.length > 0) {
+                    console.log(`Extracted ${extractedPlays.length} plays via regex!`);
+                    return {
+                        playbook_name: 'Imported Playbook',
+                        plays: extractedPlays,
+                        team_size: extractedPlays[0]?.players?.length || 5
+                    };
+                }
+
+                console.error('All repair attempts failed. Raw response (first 2000 chars):', text.substring(0, 2000));
+                throw new Error('Failed to parse AI response. The JSON was malformed. Please try again.');
+            }
+        }
+
+        function displayResults(data) {
+            resultsSection.classList.add('active');
+            emptyState.style.display = 'none';
+
+            const plays = data.plays || [];
+            resultsTitle.textContent = `Found ${plays.length} plays`;
+            playerCount.textContent = `👥 ${data.team_size || 'Unknown'}v${data.team_size || '?'}`;
+
+            // Display JSON
+            jsonOutput.textContent = JSON.stringify(data, null, 2);
+
+            // Create play cards
+            playsGrid.innerHTML = '';
+            plays.forEach((play, index) => {
+                const card = createPlayCard(play, index);
+                playsGrid.appendChild(card);
+            });
+
+            showStatus(`Successfully extracted ${plays.length} plays!`, 'success');
+        }
+
+        function createPlayCard(play, index) {
+            const card = document.createElement('div');
+            card.className = 'play-card';
+
+            const playerColors = {
+                'red': '#ef4444',
+                'orange': '#f97316',
+                'yellow': '#eab308',
+                'green': '#22c55e',
+                'blue': '#3b82f6',
+                'purple': '#8b5cf6',
+                'black': '#1f2937'
+            };
+
+            // Create SVG preview
+            const svg = createPlaySVG(play.players || [], playerColors);
+
+            card.innerHTML = `
+                <div class="play-card-header">
+                    <input type="checkbox" checked />
+                    <span class="play-number">${play.play_number || index + 1}</span>
+                    <span class="play-name">${play.play_name || 'Untitled Play'}</span>
+                </div>
+                <div class="play-card-preview">
+                    ${svg}
+                </div>
+                <div class="play-card-info">
+                    ${play.play_type || 'Unknown Type'} • ${play.players ? play.players.length : 0} Players
+                </div>
+            `;
+
+            return card;
+        }
+
+
+
+        function createPlaySVG(players, colors) {
+            // SVG field visualization (100 wide x 70 tall)
+            // In FlagSketch: y=35 is LOS (center), y=0 is endzone
+            let svgContent = '';
+
+            // Field background lines matching FlagSketch editor
+            svgContent += `<line x1="0" y1="35" x2="100" y2="35" class="field-line" />`; // LOS (center)
+            svgContent += `<line x1="0" y1="23" x2="100" y2="23" class="field-line" stroke-dasharray="2,2" />`;
+            svgContent += `<line x1="0" y1="11" x2="100" y2="11" class="field-line" stroke-dasharray="2,2" />`;
+            svgContent += `<line x1="0" y1="47" x2="100" y2="47" class="field-line" stroke-dasharray="2,2" />`;
+            svgContent += `<line x1="0" y1="59" x2="100" y2="59" class="field-line" stroke-dasharray="2,2" />`;
+
+            players.forEach(p => {
+                // Handle both hex colors and named colors
+                let color = p.color;
+                if (color && !color.startsWith('#')) {
+                    color = colors[color] || colors['blue'] || '#3b82f6';
+                }
+                if (!color) color = '#3b82f6';
+
+                // Draw route
+                if (p.route && p.route.length > 0) {
+                    let d = `M ${p.x} ${p.y}`;
+                    p.route.forEach((point, idx) => {
+                        // Skip first point if it's the same as player position
+                        if (idx === 0 && Math.abs(point.x - p.x) < 1 && Math.abs(point.y - p.y) < 1) return;
+                        d += ` L ${point.x} ${point.y}`;
+                    });
+
+                    // Check for motion/dashed style
+                    const hasDashed = p.routeStyles?.some(s => s === 'dashed') || p.is_motion;
+                    const dashArray = hasDashed ? 'stroke-dasharray="1,1"' : '';
+
+                    svgContent += `<path d="${d}" stroke="${color}" class="route-line" ${dashArray} />`;
+
+                    // Add arrow at the end
+                    const lastPoint = p.route[p.route.length - 1];
+                    if (p.routeEndType === 'circle') {
+                        svgContent += `<circle cx="${lastPoint.x}" cy="${lastPoint.y}" r="1.5" fill="none" stroke="${color}" stroke-width="0.5" />`;
+                    } else {
+                        svgContent += `<circle cx="${lastPoint.x}" cy="${lastPoint.y}" r="1" fill="${color}" />`;
+                    }
+                }
+
+                // Draw player
+                if (p.isPrimary) {
+                    // Star for primary player (QB)
+                    svgContent += `<polygon points="${createStarPoints(p.x, p.y, 2.5)}" fill="${color}" stroke="white" stroke-width="0.3" />`;
+                } else {
+                    svgContent += `<circle cx="${p.x}" cy="${p.y}" r="2.5" class="player-circle" stroke="${color}" fill="white" />`;
+                }
+
+                // Add label if present
+                if (p.label) {
+                    svgContent += `<text x="${p.x}" y="${p.y}" text-anchor="middle" dy="0.35em" font-size="1.8" fill="${color}">${p.label}</text>`;
+                }
+            });
+
+            return `<svg viewBox="0 0 100 70" preserveAspectRatio="xMidYMid meet">${svgContent}</svg>`;
+        }
+
+        // Helper to create star polygon points
+        function createStarPoints(cx, cy, r) {
+            const points = [];
+            for (let i = 0; i < 5; i++) {
+                const outerAngle = (Math.PI / 2) + (i * 2 * Math.PI / 5);
+                const innerAngle = outerAngle + Math.PI / 5;
+                points.push(`${cx + r * Math.cos(outerAngle)},${cy - r * Math.sin(outerAngle)}`);
+                points.push(`${cx + r * 0.5 * Math.cos(innerAngle)},${cy - r * 0.5 * Math.sin(innerAngle)}`);
+            }
+            return points.join(' ');
+        }
+    </script>
+</body>
+
+</html>
