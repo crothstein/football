@@ -4,6 +4,7 @@ Allow: /
 # Sitemap location
 Sitemap: https://flagsketch.com/sitemap.xml
 
-# Disallow scripts and internal directories
+# Disallow scripts, internal directories, and dev/POC pages
 Disallow: /scripts/
 Disallow: /.git/
+Disallow: /poc-import-plays.html
